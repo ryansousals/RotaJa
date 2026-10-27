@@ -1,0 +1,219 @@
+generator cliente {
+  provider = "prisma-client-js"
+}
+
+datasource banco {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum tp_usuario {
+  ADMINISTRADOR
+  OPERADOR
+  REMETENTE
+  ENTREGADOR
+}
+
+enum tp_pessoa {
+  FISICA
+  JURIDICA
+}
+
+enum tp_endereco {
+  ENTREGA
+  ORIGEM
+}
+
+enum st_pagamento {
+  PAGO
+  A_RECEBER
+}
+
+enum st_pedido {
+  PREPARANDO
+  ATRIBUIDO
+  ACEITO
+  EM_COLETA
+  NO_LOCAL
+  EM_ENTREGA
+  EM_RETORNO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum st_caixa {
+  PENDENTE
+  AGUARDANDO_VALIDACAO
+  QUITADO
+}
+
+enum tp_recebimento {
+  DINHEIRO
+  PIX_LOJA
+  CARTAO_LOJA
+}
+
+enum st_repasse {
+  PENDENTE
+  QUITADO
+}
+
+model usr_usuarios {
+  id_usr           String                  @id @default(uuid()) @banco.Uuid
+  nom_usr          String                  @banco.VarChar(150)
+  eml_usr          String                  @unique @banco.VarChar(254)
+  sen_hash         String
+  tp_usr           tp_usuario
+  st_atv           Boolean                 @default(true)
+  dt_cad           DateTime                @default(now()) @banco.Timestamptz(3)
+  empresa          emp_empresas?
+  entregador       ent_entregadores?
+  pedidos          ped_pedidos[]
+  historicos       log_historico_pedidos[]
+  caixas_validados cx_caixa_entregador[]
+}
+
+model emp_empresas {
+  id_emp   String               @id @default(uuid()) @banco.Uuid
+  id_usr   String               @unique @banco.Uuid
+  tp_pes   tp_pessoa
+  raz_soc  String               @banco.VarChar(200)
+  nom_fan  String               @banco.VarChar(150)
+  doc_emp  String               @unique @banco.VarChar(14)
+  log_emp  String
+  num_emp  String
+  cmp_emp  String?
+  bai_emp  String
+  cid_emp  String
+  uf_emp   String               @banco.Char(2)
+  tel_emp  String
+  st_atv   Boolean              @default(true)
+  usuario  usr_usuarios         @relation(fields: [id_usr], references: [id_usr])
+  pedidos  ped_pedidos[]
+  repasses rep_repasses_lojas[]
+}
+
+model ent_entregadores {
+  id_ent   String                @id @default(uuid()) @banco.Uuid
+  id_usr   String                @unique @banco.Uuid
+  doc_cpf  String                @unique @banco.Char(11)
+  pla_moto String                @banco.VarChar(8)
+  tel_ent  String
+  st_atv   Boolean               @default(true)
+  usuario  usr_usuarios          @relation(fields: [id_usr], references: [id_usr])
+  pedidos  ped_pedidos[]
+  caixas   cx_caixa_entregador[]
+}
+
+model bai_bairros {
+  id_bai        String        @id @default(uuid()) @banco.Uuid
+  nom_bai       String        @banco.VarChar(120)
+  cid_bai       String        @banco.VarChar(120)
+  uf_bai        String        @banco.Char(2)
+  vlr_tx_ent    Decimal       @banco.Decimal(12, 2)
+  vlr_ganho_ent Decimal       @banco.Decimal(12, 2)
+  vlr_tx_ret    Decimal       @default(0) @banco.Decimal(12, 2)
+  vlr_ganho_ret Decimal       @default(0) @banco.Decimal(12, 2)
+  st_atv        Boolean       @default(true)
+  pedidos       ped_pedidos[]
+
+  @@unique([nom_bai, cid_bai, uf_bai])
+}
+
+model ped_pedidos {
+  id_ped        String                  @id @default(uuid()) @banco.Uuid
+  num_ped       Int                     @unique @default(autoincrement())
+  id_usr        String                  @banco.Uuid
+  id_emp        String?                 @banco.Uuid
+  id_ent        String?                 @banco.Uuid
+  id_bai        String                  @banco.Uuid
+  id_cx         String?                 @banco.Uuid
+  id_rep        String?                 @banco.Uuid
+  chave_idem    String                  @banco.VarChar(100)
+  resumo_req    String                  @banco.Char(64)
+  nom_dest      String
+  tel_dest      String
+  log_dest      String
+  num_dest      String
+  cmp_dest      String?
+  ref_dest      String?
+  // Snapshot: endereço da loja não muda retroativamente.
+  end_loja      Json
+  tp_end        tp_endereco
+  st_pag        st_pagamento
+  st_ped        st_pedido               @default(PREPARANDO)
+  st_ret        Boolean                 @default(false)
+  vlr_prod      Decimal                 @banco.Decimal(12, 2)
+  vlr_tx        Decimal                 @banco.Decimal(12, 2)
+  vlr_ganho_ent Decimal                 @banco.Decimal(12, 2)
+  vlr_cobrar    Decimal                 @banco.Decimal(12, 2)
+  vlr_rec_din   Decimal                 @default(0) @banco.Decimal(12, 2)
+  vlr_rec_loja  Decimal                 @default(0) @banco.Decimal(12, 2)
+  tp_rec        tp_recebimento?
+  versao        Int                     @default(0)
+  dt_cad        DateTime                @default(now()) @banco.Timestamptz(3)
+  dt_alt        DateTime                @updatedAt @banco.Timestamptz(3)
+  dt_conc       DateTime?               @banco.Timestamptz(3)
+  remetente     usr_usuarios            @relation(fields: [id_usr], references: [id_usr])
+  empresa       emp_empresas?           @relation(fields: [id_emp], references: [id_emp])
+  entregador    ent_entregadores?       @relation(fields: [id_ent], references: [id_ent])
+  bairro        bai_bairros             @relation(fields: [id_bai], references: [id_bai])
+  caixa         cx_caixa_entregador?    @relation(fields: [id_cx], references: [id_cx])
+  repasse       rep_repasses_lojas?     @relation(fields: [id_rep], references: [id_rep])
+  historicos    log_historico_pedidos[]
+
+  @@unique([id_usr, chave_idem])
+  @@index([st_ped, dt_cad])
+  @@index([id_emp, dt_cad])
+  @@index([id_ent, dt_conc])
+}
+
+model cx_caixa_entregador {
+  id_cx             String           @id @default(uuid()) @banco.Uuid
+  id_ent            String           @banco.Uuid
+  dt_ref            DateTime         @banco.Date
+  dt_ini            DateTime         @banco.Timestamptz(3)
+  dt_fim            DateTime         @banco.Timestamptz(3)
+  qtd_peds          Int
+  vlr_tot_ganho     Decimal          @banco.Decimal(12, 2)
+  vlr_tot_rec_din   Decimal          @banco.Decimal(12, 2)
+  vlr_saldo_rep_adm Decimal          @banco.Decimal(12, 2)
+  st_cx             st_caixa         @default(PENDENTE)
+  id_usr_val        String?          @banco.Uuid
+  dt_val            DateTime?        @banco.Timestamptz(3)
+  ref_comprovante   String?
+  entregador        ent_entregadores @relation(fields: [id_ent], references: [id_ent])
+  validador         usr_usuarios?    @relation(fields: [id_usr_val], references: [id_usr])
+  pedidos           ped_pedidos[]
+
+  @@unique([id_ent, dt_ini, dt_fim])
+}
+
+model rep_repasses_lojas {
+  id_rep          String        @id @default(uuid()) @banco.Uuid
+  id_emp          String        @banco.Uuid
+  dt_ini          DateTime      @banco.Timestamptz(3)
+  dt_fim          DateTime      @banco.Timestamptz(3)
+  vlr_rep         Decimal       @banco.Decimal(12, 2)
+  st_rep          st_repasse    @default(PENDENTE)
+  dt_pag          DateTime?     @banco.Timestamptz(3)
+  ref_comprovante String?
+  empresa         emp_empresas  @relation(fields: [id_emp], references: [id_emp])
+  pedidos         ped_pedidos[]
+
+  @@unique([id_emp, dt_ini, dt_fim])
+}
+
+model log_historico_pedidos {
+  id_log    String       @id @default(uuid()) @banco.Uuid
+  id_ped    String       @banco.Uuid
+  id_usr    String       @banco.Uuid
+  acao      String
+  dados_ant Json?
+  dados_nov Json
+  dt_cad    DateTime     @default(now()) @banco.Timestamptz(3)
+  pedido    ped_pedidos  @relation(fields: [id_ped], references: [id_ped])
+  usuario   usr_usuarios @relation(fields: [id_usr], references: [id_usr])
+
+  @@index([id_ped, dt_cad])
+}
