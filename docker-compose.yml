@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?configure .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?configure .env}
+      POSTGRES_DB: ${POSTGRES_DB:?configure .env}
+    volumes:
+      - dados_pg:/var/lib/postgresql/data
+    ports: ["127.0.0.1:${POSTGRES_PORT:-55432}:5432"]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  cache:
+    image: redis:7.4-alpine
+    command: [redis-server, --appendonly, 'yes']
+    volumes: [dados_redis:/data]
+    ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  migracao:
+    build: {context: ., target: migracao}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    build: {context: ., target: producao}
+    restart: unless-stopped
+    ports: ["127.0.0.1:3001:3001"]
+    healthcheck:
+      test: [CMD, node, -e, 'fetch("http://127.0.0.1:3001/saude").then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))']
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 6
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://cache:6379
+      WEB_ORIGINS: ${WEB_ORIGINS}
+      PORT: 3001
+    depends_on:
+      migracao: {condition: service_completed_successfully}
+      cache: {condition: service_healthy}
+volumes:
+  dados_pg:
+  dados_redis:
