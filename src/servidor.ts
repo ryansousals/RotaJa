@@ -13,6 +13,7 @@ import { Prisma } from '@prisma/client';
 import { z, ZodError } from 'zod';
 import { Falha, operador } from './dominio.js';
 import { banco, criarPedido, despachar, mudarStatus, fecharCaixa, transacao, type Ator } from './servicos.js';
+import { registrarPortal } from './portal.js';
 import { registrarPainel } from './painel.js';
 const app = express(), http = createServer(app);
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -62,6 +63,7 @@ app.post('/autenticacao/sair', async (req, res) => {
   res.clearCookie('rotaja_sessao', cookieOpcoes).sendStatus(204);
 });
 registrarPainel(app, redis);
+registrarPortal(app);
 app.post('/usuarios', async (req, res) => {
   exigirOperador(ator(res));
   const d = z.object({ nom_usr: z.string().min(3).max(150), eml_usr: z.string().email(), senha: z.string().min(16).max(100), tp_usr: z.enum(['OPERADOR','REMETENTE','ENTREGADOR']) }).parse(req.body);

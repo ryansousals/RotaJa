@@ -67,6 +67,14 @@ try {
   for (const st_ped of ['ACEITO','EM_COLETA','NO_LOCAL','EM_ENTREGA','CONCLUIDO']) {
     pedido = await chamar('/pedidos/status', entregador.token, { id_ped: pedido.id_ped, versao: pedido.versao, st_ped, ...(st_ped === 'CONCLUIDO' ? { tp_rec: 'DINHEIRO' } : {}) });
   }
+  const consultarPortal = (token = cliente.token) => chamar('/portal/resumo?' + new URLSearchParams({ inicio, fim: new Date(Date.now()+60000).toISOString() }), token);
+  const abertoPortal = await consultarPortal();
+  assert.equal(abertoPortal.total_chamadas, 3); assert.equal(abertoPortal.chamadas_periodo, 1);
+  assert.equal(abertoPortal.taxas_periodo, '7'); assert.equal(abertoPortal.a_receber, '93'); assert.equal(abertoPortal.sem_fechamento, '93');
+  assert.equal((await consultarPortal(outroCliente.token)).total_chamadas, 0);
+  assert.equal((await consultarPortal(outroCliente.token)).a_receber, '0');
+  const tentarEscopo = await fetch(api + '/portal/resumo?' + new URLSearchParams({ inicio, fim: new Date().toISOString(), id_emp: segunda.id_emp }), { headers: { Authorization: `Bearer ${cliente.token}` } });
+  assert.equal(tentarEscopo.status, 422);
   const periodo = { dt_ini: inicio, dt_fim: new Date().toISOString() };
   const caixa = await chamar('/caixas/fechar', entregador.token, { id_ent: ent.id_ent, ...periodo });
   assert.equal(caixa.vlr_saldo_rep_adm, '93');
@@ -74,7 +82,9 @@ try {
   await chamar(`/caixas/${caixa.id_cx}/quitar`, admin.token, { ref_comprovante: `teste-integrado-${sufixo}` });
   const repasse = await chamar('/repasses', admin.token, { id_emp: empresa.id_emp, ...periodo });
   assert.equal(repasse.vlr_rep, '93');
+  const fechadoPortal = await consultarPortal(); assert.equal(fechadoPortal.a_receber, '93'); assert.equal(fechadoPortal.sem_fechamento, '0'); assert.equal(fechadoPortal.em_fechamento, '93');
   await chamar(`/repasses/${repasse.id_rep}/quitar`, admin.token, { ref_comprovante: `teste-integrado-${sufixo}` });
+  const quitadoPortal = await consultarPortal(); assert.equal(quitadoPortal.a_receber, '0'); assert.equal(quitadoPortal.recebido_periodo, '93');
   const historico = await chamar(`/pedidos/${pedido.id_ped}/historico`, admin.token);
   assert.equal((historico as unknown as unknown[]).length, 7);
   const tokenRevogado = cliente.token;
