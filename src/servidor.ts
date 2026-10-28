@@ -13,17 +13,24 @@ import { Prisma } from '@prisma/client';
 import { z, ZodError } from 'zod';
 import { Falha, operador } from './dominio.js';
 import { banco, criarPedido, despachar, mudarStatus, fecharCaixa, transacao, type Ator } from './servicos.js';
+import { registrarPainel } from './painel.js';
 const app = express(), http = createServer(app);
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
 redis.on('error', () => console.error('Falha de conexão com Redis'));
 const sub = redis.duplicate();
 sub.on('error', () => console.error('Falha no assinante Redis'));
 const origens = (process.env.WEB_ORIGINS ?? 'http://localhost:3000').split(',');
-const io = new Server(http, { cors: { origin: origens }, transports: ['websocket'] });
+const io = new Server(http, { cors: { origin: origens }, transports: ['websocket'], allowRequest: (req, cb) => cb(null, !req.headers.origin || origens.includes(req.headers.origin)) });
 io.adapter(createAdapter(redis, sub));
 app.use(helmet(), cors({ origin: origens }), express.json({ limit: '32kb' }));
 app.use(rateLimit({ windowMs: 60_000, limit: 120 }));
+app.use((req, _res, next) => {
+  if (!['GET','HEAD','OPTIONS'].includes(req.method) && req.headers.origin && !origens.includes(req.headers.origin)) { next(new Falha(403, 'Origem não permitida')); return; }
+  next();
+});
 const chaveSessao = (token: string) => `sessao:${createHash('sha256').update(token).digest('hex')}`;
+const tokenRequisicao = (req: { headers: { authorization?: string; cookie?: string } }) => req.headers.authorization?.replace(/^Bearer /, '') ?? req.headers.cookie?.split(';').map(c => c.trim()).find(c => c.startsWith('rotaja_sessao='))?.slice('rotaja_sessao='.length);
+const cookieOpcoes = { httpOnly: true, sameSite: 'strict' as const, secure: process.env.COOKIE_SEGURO === 'true', path: '/' };
 async function autenticar(token?: string): Promise<Ator> {
   if (!token || token.length > 256) throw new Falha(401, 'Sessão inválida');
   const id = await redis.get(chaveSessao(token));
@@ -41,10 +48,20 @@ app.post('/autenticacao/entrar', rateLimit({ windowMs: 900_000, limit: 20 }), as
   if (!u?.st_atv || !await compare(d.senha, u.sen_hash)) throw new Falha(401, 'Credenciais inválidas');
   const token = randomBytes(32).toString('hex');
   await redis.set(chaveSessao(token), u.id_usr, 'EX', 3600);
+  res.cookie('rotaja_sessao', token, { ...cookieOpcoes, maxAge: 3600_000 });
   res.json({ token, expira_em: 3600, usuario: { id_usr: u.id_usr, nom_usr: u.nom_usr, tp_usr: u.tp_usr } });
 });
-app.use(async (req, res, next) => { try { res.locals.ator = await autenticar(req.headers.authorization?.replace(/^Bearer /, '')); next(); } catch (e) { next(e); } });
-app.post('/autenticacao/sair', async (req, res) => { await redis.del(chaveSessao(req.headers.authorization!.slice(7))); res.sendStatus(204); });
+app.use(async (req, res, next) => { try {
+  if (!['GET','HEAD','OPTIONS'].includes(req.method) && req.headers.origin && !origens.includes(req.headers.origin)) throw new Falha(403, 'Origem não permitida');
+  res.locals.ator = await autenticar(tokenRequisicao(req)); next();
+} catch (e) { next(e); } });
+app.post('/autenticacao/sair', async (req, res) => {
+  const token = tokenRequisicao(req)!;
+  await redis.del(chaveSessao(token));
+  io.in(`sessao:${chaveSessao(token)}`).disconnectSockets(true);
+  res.clearCookie('rotaja_sessao', cookieOpcoes).sendStatus(204);
+});
+registrarPainel(app, redis);
 app.post('/usuarios', async (req, res) => {
   exigirOperador(ator(res));
   const d = z.object({ nom_usr: z.string().min(3).max(150), eml_usr: z.string().email(), senha: z.string().min(16).max(100), tp_usr: z.enum(['OPERADOR','REMETENTE','ENTREGADOR']) }).parse(req.body);
@@ -68,8 +85,8 @@ app.post('/entregadores', async (req, res) => {
   if (u?.tp_usr !== 'ENTREGADOR') throw new Falha(422, 'Usuário deve ter perfil entregador');
   res.status(201).json(await banco.ent_entregadores.create({ data: d }));
 });
-app.get('/entregadores', async (_req, res) => { exigirOperador(ator(res)); res.json(await banco.ent_entregadores.findMany({ where: { st_atv: true, usuario: { st_atv: true } }, select: { id_ent: true, usuario: { select: { nom_usr: true } } } })); });
-app.get('/bairros', async (_req, res) => { res.json(await banco.bai_bairros.findMany({ where: { st_atv: true }, orderBy: { nom_bai: 'asc' } })); });
+app.get('/entregadores', async (_req, res) => { exigirOperador(ator(res)); res.json(await banco.ent_entregadores.findMany({ include: { usuario: { select: { nom_usr: true, eml_usr: true, st_atv: true } } }, orderBy: { usuario: { nom_usr: 'asc' } } })); });
+app.get('/bairros', async (_req, res) => { res.json(await banco.bai_bairros.findMany({ where: operador(ator(res).tp_usr) ? {} : { st_atv: true }, orderBy: { nom_bai: 'asc' } })); });
 app.post('/bairros', async (req, res) => {
   exigirOperador(ator(res)); const moeda = z.string().regex(/^\d{1,9}(\.\d{1,2})?$/);
   const dados = z.object({ nom_bai: z.string().min(2), cid_bai: z.string().min(2), uf_bai: z.string().length(2), vlr_tx_ent: moeda, vlr_ganho_ent: moeda, vlr_tx_ret: moeda, vlr_ganho_ret: moeda }).parse(req.body);
@@ -78,8 +95,19 @@ app.post('/bairros', async (req, res) => {
 function publicar(p: { id_usr: string; id_ped: string; versao: number; st_ped: string }) {
   // Apenas metadados: dados pessoais são consultados via HTTP com autorização atual.
   io.to('operacao').to(`usr:${p.id_usr}`).emit('pedido:atualizado', { id_ped: p.id_ped, versao: p.versao, st_ped: p.st_ped });
+  banco.ped_pedidos.findUnique({ where: { id_ped: p.id_ped }, select: { entregador: { select: { id_usr: true } } } }).then(r => {
+    if (r?.entregador) io.to(`usr:${r.entregador.id_usr}`).emit('pedido:atualizado', { id_ped: p.id_ped });
+  }).catch(() => console.error('Falha ao notificar entregador'));
 }
 app.post('/pedidos', async (req, res) => { const p = await criarPedido(ator(res), req.body); publicar(p); res.status(201).json(p); });
+app.post('/operacao/pedidos', async (req, res) => {
+  exigirOperador(ator(res));
+  const d = z.object({ id_emp: z.string().uuid(), pedido: z.unknown() }).parse(req.body);
+  const emp = await banco.emp_empresas.findUniqueOrThrow({ where: { id_emp: d.id_emp }, include: { usuario: { select: { st_atv: true } } } });
+  if (!emp.usuario.st_atv) throw new Falha(422, 'Usuário da empresa inativo');
+  const p = await criarPedido({ id_usr: emp.id_usr, tp_usr: 'REMETENTE' }, d.pedido, ator(res).id_usr);
+  publicar(p); res.status(201).json(p);
+});
 async function escopo(a: Ator): Promise<Prisma.ped_pedidosWhereInput> {
   if (operador(a.tp_usr)) return {};
   if (a.tp_usr === 'REMETENTE') return { id_usr: a.id_usr };
@@ -88,10 +116,14 @@ async function escopo(a: Ator): Promise<Prisma.ped_pedidosWhereInput> {
 app.get('/pedidos', async (req, res) => {
   const pagina = z.coerce.number().int().min(1).max(100000).default(1).parse(req.query.pagina);
   const where = await escopo(ator(res));
-  res.json({ pagina, itens: await banco.ped_pedidos.findMany({ where, take: 30, skip: (pagina - 1) * 30, orderBy: { dt_cad: 'desc' }, include: { bairro: true, empresa: { select: { nom_fan: true } }, entregador: { select: { id_ent: true, usuario: { select: { nom_usr: true } } } } } }) });
+  const filtro = z.object({ busca: z.string().max(120).optional(), status: z.enum(['PREPARANDO','ATRIBUIDO','ACEITO','EM_COLETA','NO_LOCAL','EM_ENTREGA','EM_RETORNO','CONCLUIDO','CANCELADO','ATIVOS']).optional() }).parse(req.query);
+  if (filtro.status) where.st_ped = filtro.status === 'ATIVOS' ? { notIn: ['CONCLUIDO','CANCELADO'] } : filtro.status;
+  if (filtro.busca) where.OR = [{ nom_dest: { contains: filtro.busca, mode: 'insensitive' } }, { empresa: { nom_fan: { contains: filtro.busca, mode: 'insensitive' } } }, ...( /^\d{1,9}$/.test(filtro.busca) ? [{ num_ped: Number(filtro.busca) }] : [])];
+  const [total, itens] = await banco.$transaction([banco.ped_pedidos.count({ where }), banco.ped_pedidos.findMany({ where, take: 20, skip: (pagina - 1) * 20, orderBy: { dt_cad: 'desc' }, include: { bairro: true, empresa: { select: { nom_fan: true } }, entregador: { select: { id_ent: true, usuario: { select: { nom_usr: true } } } } } })]);
+  res.json({ pagina, total, paginas: Math.max(1, Math.ceil(total / 20)), itens });
 });
 app.get('/pedidos/:id', async (req, res) => {
-  const p = await banco.ped_pedidos.findFirst({ where: { ...await escopo(ator(res)), id_ped: z.string().uuid().parse(req.params.id) } });
+  const p = await banco.ped_pedidos.findFirst({ where: { ...await escopo(ator(res)), id_ped: z.string().uuid().parse(req.params.id) }, include: { bairro: true, empresa: { select: { nom_fan: true } }, entregador: { select: { id_ent: true, usuario: { select: { nom_usr: true } } } } } });
   if (!p) throw new Falha(404, 'Pedido não encontrado');
   res.json(p);
 });
@@ -152,15 +184,19 @@ app.post('/caixas/:id/quitar', async (req, res) => {
   const r = await banco.cx_caixa_entregador.updateMany({ where: { id_cx: z.string().uuid().parse(req.params.id), st_cx: 'AGUARDANDO_VALIDACAO' }, data: { ...d, st_cx: 'QUITADO', id_usr_val: ator(res).id_usr, dt_val: new Date() } });
   if (!r.count) throw new Falha(409, 'Caixa não está aguardando validação'); res.sendStatus(204);
 });
-io.use(async (socket, next) => { try { socket.data.ator = await autenticar(socket.handshake.auth.token); next(); } catch { next(new Error('Sessão inválida')); } });
+io.use(async (socket, next) => { try {
+  const token = socket.handshake.auth.token ?? tokenRequisicao(socket.request);
+  socket.data.ator = await autenticar(token); socket.data.token = token; next();
+} catch { next(new Error('Sessão inválida')); } });
 io.on('connection', socket => {
   const a = socket.data.ator as Ator;
+  socket.join(`sessao:${chaveSessao(socket.data.token)}`);
   socket.join(`usr:${a.id_usr}`); if (operador(a.tp_usr)) socket.join('operacao');
   const expirar = setTimeout(() => socket.disconnect(true), 3600_000); socket.on('disconnect', () => clearTimeout(expirar));
   socket.on('pedido:despachar', async (dados, ack) => {
     if (typeof ack !== 'function') return;
     try {
-      const atual = await autenticar(socket.handshake.auth.token);
+      const atual = await autenticar(socket.data.token);
       const r = await despachar(atual, dados); publicar(r.pedido);
       io.to(`usr:${r.id_usr_ent}`).emit('chamado:atribuido', { id_ped: r.pedido.id_ped });
       ack({ ok: true, pedido: r.pedido });
@@ -168,7 +204,7 @@ io.on('connection', socket => {
   });
   socket.on('gps:atualizar', async dados => {
     try {
-      const atual = await autenticar(socket.handshake.auth.token);
+      const atual = await autenticar(socket.data.token);
       if (atual.tp_usr !== 'ENTREGADOR') return;
       const d = z.object({ id_ped: z.string().uuid(), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), dt: z.string().datetime() }).parse(dados);
       if (Math.abs(Date.now() - Date.parse(d.dt)) > 60_000) return;

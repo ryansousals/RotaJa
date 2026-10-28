@@ -21,7 +21,7 @@ export async function transacao<T>(fn: (tx: Prisma.TransactionClient) => Promise
     }
   }
 }
-export async function criarPedido(ator: Ator, entrada: unknown) {
+export async function criarPedido(ator: Ator, entrada: unknown, idAutor = ator.id_usr) {
   if (ator.tp_usr !== 'REMETENTE') throw new Falha(403, 'Apenas remetentes abrem chamados neste endpoint');
   const dados = novoPedido.parse(entrada);
   const resumo = createHash('sha256').update(JSON.stringify(dados)).digest('hex');
@@ -44,7 +44,7 @@ export async function criarPedido(ator: Ator, entrada: unknown) {
       vlr_tx: taxa, vlr_ganho_ent: ganho,
       vlr_cobrar: dados.st_pag === 'A_RECEBER' ? new Prisma.Decimal(dados.vlr_prod).plus(taxa) : 0,
     } });
-    await tx.log_historico_pedidos.create({ data: { id_ped: pedido.id_ped, id_usr: ator.id_usr, acao: 'CRIACAO', dados_nov: { st_ped: pedido.st_ped, vlr_tx: taxa.toFixed(2) } } });
+    await tx.log_historico_pedidos.create({ data: { id_ped: pedido.id_ped, id_usr: idAutor, acao: 'CRIACAO', dados_nov: { st_ped: pedido.st_ped, vlr_tx: taxa.toFixed(2) } } });
     return pedido;
   });
 }
