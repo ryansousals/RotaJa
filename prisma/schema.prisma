@@ -91,6 +91,7 @@ model emp_empresas {
   usuario  usr_usuarios         @relation(fields: [id_usr], references: [id_usr])
   pedidos  ped_pedidos[]
   repasses rep_repasses_lojas[]
+  tarifas  tx_taxas_empresas[]
 }
 
 model ent_entregadores {
@@ -116,6 +117,7 @@ model bai_bairros {
   vlr_ganho_ret Decimal       @default(0) @banco.Decimal(12, 2)
   st_atv        Boolean       @default(true)
   pedidos       ped_pedidos[]
+  tarifas       tx_taxas_empresas[]
 
   @@unique([nom_bai, cid_bai, uf_bai])
 }
@@ -150,6 +152,7 @@ model ped_pedidos {
   vlr_rec_din   Decimal                 @default(0) @banco.Decimal(12, 2)
   vlr_rec_loja  Decimal                 @default(0) @banco.Decimal(12, 2)
   tp_rec        tp_recebimento?
+  tp_pag_prev   tp_recebimento?
   versao        Int                     @default(0)
   dt_cad        DateTime                @default(now()) @banco.Timestamptz(3)
   dt_alt        DateTime                @updatedAt @banco.Timestamptz(3)
@@ -166,6 +169,17 @@ model ped_pedidos {
   @@index([st_ped, dt_cad])
   @@index([id_emp, dt_cad])
   @@index([id_ent, dt_conc])
+}
+
+model tx_taxas_empresas {
+  id_emp        String @banco.Uuid
+  id_bai        String @banco.Uuid
+  vlr_tx_ent    Decimal @banco.Decimal(12, 2)
+  vlr_tx_ret    Decimal @banco.Decimal(12, 2)
+  empresa       emp_empresas @relation(fields: [id_emp], references: [id_emp])
+  bairro        bai_bairros @relation(fields: [id_bai], references: [id_bai])
+
+  @@id([id_emp, id_bai])
 }
 
 model cx_caixa_entregador {

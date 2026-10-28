@@ -86,9 +86,14 @@ app.post('/entregadores', async (req, res) => {
   res.status(201).json(await banco.ent_entregadores.create({ data: d }));
 });
 app.get('/entregadores', async (_req, res) => { exigirOperador(ator(res)); res.json(await banco.ent_entregadores.findMany({ include: { usuario: { select: { nom_usr: true, eml_usr: true, st_atv: true } } }, orderBy: { usuario: { nom_usr: 'asc' } } })); });
-app.get('/bairros', async (_req, res) => { res.json(await banco.bai_bairros.findMany({ where: operador(ator(res).tp_usr) ? {} : { st_atv: true }, orderBy: { nom_bai: 'asc' } })); });
+app.get('/bairros', async (_req, res) => {
+  const a = ator(res);
+  const emp = a.tp_usr === 'REMETENTE' ? await banco.emp_empresas.findUnique({ where: { id_usr: a.id_usr } }) : null;
+  const bairros = await banco.bai_bairros.findMany({ where: operador(a.tp_usr) ? {} : { st_atv: true }, orderBy: { nom_bai: 'asc' }, include: { tarifas: { where: { id_emp: emp?.id_emp ?? '00000000-0000-0000-0000-000000000000' } } } });
+  res.json(bairros.map(({ tarifas, ...b }) => ({ ...b, ...(tarifas[0] ? { vlr_tx_ent: tarifas[0].vlr_tx_ent, vlr_tx_ret: tarifas[0].vlr_tx_ret } : {}) })));
+});
 app.post('/bairros', async (req, res) => {
-  exigirOperador(ator(res)); const moeda = z.string().regex(/^\d{1,9}(\.\d{1,2})?$/);
+  if (ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente o administrador define tarifas'); const moeda = z.string().regex(/^\d{1,9}(\.\d{1,2})?$/);
   const dados = z.object({ nom_bai: z.string().min(2), cid_bai: z.string().min(2), uf_bai: z.string().length(2), vlr_tx_ent: moeda, vlr_ganho_ent: moeda, vlr_tx_ret: moeda, vlr_ganho_ret: moeda }).parse(req.body);
   res.status(201).json(await banco.bai_bairros.create({ data: dados }));
 });
@@ -100,14 +105,7 @@ function publicar(p: { id_usr: string; id_ped: string; versao: number; st_ped: s
   }).catch(() => console.error('Falha ao notificar entregador'));
 }
 app.post('/pedidos', async (req, res) => { const p = await criarPedido(ator(res), req.body); publicar(p); res.status(201).json(p); });
-app.post('/operacao/pedidos', async (req, res) => {
-  exigirOperador(ator(res));
-  const d = z.object({ id_emp: z.string().uuid(), pedido: z.unknown() }).parse(req.body);
-  const emp = await banco.emp_empresas.findUniqueOrThrow({ where: { id_emp: d.id_emp }, include: { usuario: { select: { st_atv: true } } } });
-  if (!emp.usuario.st_atv) throw new Falha(422, 'Usuário da empresa inativo');
-  const p = await criarPedido({ id_usr: emp.id_usr, tp_usr: 'REMETENTE' }, d.pedido, ator(res).id_usr);
-  publicar(p); res.status(201).json(p);
-});
+app.post('/operacao/pedidos', (_req, _res) => { throw new Falha(403, 'Somente lojas podem abrir chamadas'); });
 async function escopo(a: Ator): Promise<Prisma.ped_pedidosWhereInput> {
   if (operador(a.tp_usr)) return {};
   if (a.tp_usr === 'REMETENTE') return { id_usr: a.id_usr };
@@ -131,15 +129,20 @@ app.get('/pedidos/:id/historico', async (req, res) => { exigirOperador(ator(res)
 app.post('/pedidos/status', async (req, res) => { const p = await mudarStatus(ator(res), req.body); publicar(p); res.json(p); });
 app.patch('/pedidos/:id', async (req, res) => {
   exigirOperador(ator(res));
-  const d = z.object({ versao: z.number().int().nonnegative(), motivo: z.string().min(10).max(500), nom_dest: z.string().min(1).optional(), log_dest: z.string().min(1).optional(), num_dest: z.string().min(1).optional(), cmp_dest: z.string().optional(), ref_dest: z.string().optional(), tel_dest: z.string().regex(/^\+?\d{10,15}$/).optional(), vlr_prod: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/).optional(), vlr_tx: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/).optional(), vlr_ganho_ent: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/).optional(), id_bai: z.string().uuid().optional() }).strict().parse(req.body);
+  const d = z.object({ versao: z.number().int().nonnegative(), motivo: z.string().min(10).max(500), nom_dest: z.string().min(1).optional(), log_dest: z.string().min(1).optional(), num_dest: z.string().min(1).optional(), cmp_dest: z.string().optional(), ref_dest: z.string().optional(), tel_dest: z.string().regex(/^\+?\d{10,15}$/).optional(), vlr_cobrar: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/).optional(), vlr_tx: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/).optional(), vlr_ganho_ent: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/).optional(), id_bai: z.string().uuid().optional() }).strict().parse(req.body);
+  if (ator(res).tp_usr !== 'ADMINISTRADOR' && (d.vlr_tx !== undefined || d.vlr_ganho_ent !== undefined || d.vlr_cobrar !== undefined)) throw new Falha(403, 'Somente o administrador altera valores');
   const p = await transacao(async tx => {
     const id_ped = z.string().uuid().parse(req.params.id);
     const antes = await tx.ped_pedidos.findUniqueOrThrow({ where: { id_ped } });
     if (antes.id_cx || antes.id_rep || ['CONCLUIDO','CANCELADO'].includes(antes.st_ped)) throw new Falha(409, 'Pedido encerrado exige lançamento de ajuste financeiro; não reescreva o histórico');
     if (d.id_bai && !await tx.bai_bairros.findFirst({ where: { id_bai: d.id_bai, st_atv: true } })) throw new Falha(422, 'Bairro não permitido');
     const { versao, motivo, ...campos } = d;
-    const vlr_cobrar = antes.st_pag === 'A_RECEBER' ? new Prisma.Decimal(d.vlr_prod ?? antes.vlr_prod).plus(d.vlr_tx ?? antes.vlr_tx) : new Prisma.Decimal(0);
-    const r = await tx.ped_pedidos.updateMany({ where: { id_ped, versao }, data: { ...campos, vlr_cobrar, versao: { increment: 1 } } });
+    if (antes.st_pag === 'PAGO' && d.vlr_cobrar !== undefined) throw new Falha(422, 'Pedido pago não recebe cobrança');
+    const vlr_cobrar = new Prisma.Decimal(d.vlr_cobrar ?? antes.vlr_cobrar);
+    const taxa = new Prisma.Decimal(d.vlr_tx ?? antes.vlr_tx);
+    if (antes.st_pag === 'A_RECEBER' && vlr_cobrar.lessThan(taxa)) throw new Falha(422, 'O total deve incluir a taxa');
+    const vlr_prod = antes.st_pag === 'A_RECEBER' ? vlr_cobrar.minus(taxa) : antes.vlr_prod;
+    const r = await tx.ped_pedidos.updateMany({ where: { id_ped, versao }, data: { ...campos, vlr_cobrar, vlr_prod, versao: { increment: 1 } } });
     if (!r.count) throw new Falha(409, 'Versão desatualizada');
     const depois = await tx.ped_pedidos.findUniqueOrThrow({ where: { id_ped } });
     await tx.log_historico_pedidos.create({ data: { id_ped, id_usr: ator(res).id_usr, acao: 'EDICAO_ADMINISTRATIVA', dados_ant: JSON.parse(JSON.stringify(antes)), dados_nov: { motivo, pedido: JSON.parse(JSON.stringify(depois)) } } });

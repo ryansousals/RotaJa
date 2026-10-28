@@ -24,7 +24,36 @@ const ent = await chamar('/entregadores', admin.token, { id_usr: motoboy.id_usr,
 const bairro = await chamar('/bairros', admin.token, { nom_bai: `Bairro teste ${sufixo}`, cid_bai: 'Floriano', uf_bai: 'PI', vlr_tx_ent: '7.00', vlr_ganho_ent: '7.00', vlr_tx_ret: '3.00', vlr_ganho_ret: '3.00' });
 const cliente = await entrar(`loja.${sufixo}@teste.local`, senha);
 const entregador = await entrar(`ent.${sufixo}@teste.local`, senha);
-const dados = { id_bai: bairro.id_bai, chave_idem: randomUUID(), nom_dest: 'Destinatário teste integrado', tel_dest: '5589999990002', log_dest: 'Rua de destino', num_dest: '20', tp_end: 'ENTREGA', st_ret: false, st_pag: 'A_RECEBER', vlr_prod: '93.00' };
+const dados = { id_bai: bairro.id_bai, chave_idem: randomUUID(), nom_dest: 'Destinatário teste integrado', tel_dest: '5589999990002', log_dest: 'Rua de destino', num_dest: '20', tp_end: 'ENTREGA', st_ret: false, st_pag: 'A_RECEBER', vlr_cobrar: '100.00', tp_pag_prev: 'DINHEIRO' };
+// Regressões: tarifas por loja, exclusividade do ADM e cobrança total inclusiva.
+const negar = async (rota: string, token: string, corpo: unknown, metodo = 'POST', esperado = 403) => {
+  const r = await fetch(api + rota, { method: metodo, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+  assert.equal(r.status, esperado, rota);
+};
+const op = await chamar('/usuarios', admin.token, { nom_usr: 'Operador de teste', eml_usr: `op.${sufixo}@teste.local`, senha, tp_usr: 'OPERADOR' });
+const operador = await entrar(`op.${sufixo}@teste.local`, senha);
+const rotaTaxa = `/empresas/${empresa.id_emp}/tarifas/${bairro.id_bai}`;
+await negar('/pedidos', admin.token, dados);
+await negar('/operacao/pedidos', admin.token, { id_emp: empresa.id_emp, pedido: dados });
+await negar(rotaTaxa, cliente.token, { vlr_tx_ent: '1', vlr_tx_ret: '0' }, 'PUT');
+await negar(rotaTaxa, operador.token, { vlr_tx_ent: '1', vlr_tx_ret: '0' }, 'PUT');
+await negar(`/bairros/${bairro.id_bai}`, operador.token, { vlr_tx_ent: '1' }, 'PATCH');
+await chamar(rotaTaxa, admin.token, { vlr_tx_ent: '9.00', vlr_tx_ret: '4.00' }, 'PUT');
+const listaBairros = await chamar('/bairros', cliente.token);
+assert.equal(listaBairros.find((b: Registro) => b.id_bai === bairro.id_bai).vlr_tx_ent, '9');
+const segunda = await chamar('/cadastros/empresa', admin.token, { nom_usr: 'Segunda loja', eml_usr: `segunda.${sufixo}@teste.local`, senha, tp_pes: 'JURIDICA', raz_soc: 'Segunda loja teste', nom_fan: 'Segunda loja teste', doc_emp: documento(), log_emp: 'Rua de teste', num_emp: '2', bai_emp: 'Centro', cid_emp: 'Floriano', uf_emp: 'PI', tel_emp: '5589999990000' });
+const outroCliente = await entrar(`segunda.${sufixo}@teste.local`, senha);
+assert.equal((await chamar('/bairros', outroCliente.token)).find((b: Registro) => b.id_bai === bairro.id_bai).vlr_tx_ent, '7');
+const { vlr_cobrar, tp_pag_prev, ...semCobranca } = dados;
+const pago = await chamar('/pedidos', cliente.token, { ...semCobranca, chave_idem: randomUUID(), st_pag: 'PAGO', st_ret: true });
+assert.equal(pago.vlr_tx, '13'); assert.equal(pago.vlr_cobrar, '0'); assert.equal(pago.tp_pag_prev, null);
+await negar('/pedidos', cliente.token, { ...dados, chave_idem: randomUUID(), st_pag: 'PAGO' }, 'POST', 422);
+await negar('/pedidos', cliente.token, { ...dados, chave_idem: randomUUID(), vlr_cobrar: '8' }, 'POST', 422);
+const inclusivo = await chamar('/pedidos', cliente.token, { ...dados, chave_idem: randomUUID() });
+assert.equal(inclusivo.vlr_cobrar, '100'); assert.equal(inclusivo.vlr_prod, '91'); assert.equal(inclusivo.tp_pag_prev, 'DINHEIRO');
+await chamar(rotaTaxa, admin.token, { vlr_tx_ent: '7', vlr_tx_ret: '3' }, 'PUT');
+assert.equal((await chamar('/pedidos/' + inclusivo.id_ped, cliente.token)).vlr_tx, '9');
+for (const p of [pago, inclusivo]) await chamar('/pedidos/status', admin.token, { id_ped: p.id_ped, versao: p.versao, st_ped: 'CANCELADO' });
 const inicio = new Date().toISOString();
 let pedido = await chamar('/pedidos', cliente.token, dados);
 assert.equal(pedido.vlr_cobrar, '100');

@@ -10,8 +10,12 @@ export const novoPedido = z.object({
   id_bai: z.string().uuid(), chave_idem: z.string().min(8).max(100), nom_dest: texto,
   tel_dest: z.string().regex(/^\+?[0-9]{10,15}$/), log_dest: texto, num_dest: texto,
   cmp_dest: texto.optional(), ref_dest: texto.optional(), tp_end: z.enum(['ENTREGA','ORIGEM']),
-  st_ret: z.boolean(), st_pag: z.enum(['PAGO','A_RECEBER']), vlr_prod: dinheiro,
-}).strict();
+  st_ret: z.boolean(), st_pag: z.enum(['PAGO','A_RECEBER']), vlr_cobrar: dinheiro.optional(),
+  tp_pag_prev: z.enum(['DINHEIRO','PIX_LOJA','CARTAO_LOJA']).optional(),
+}).strict().superRefine((d, ctx) => {
+  if (d.st_pag === 'A_RECEBER' && (!d.vlr_cobrar || !d.tp_pag_prev)) ctx.addIssue({ code: 'custom', message: 'Informe o total a recolher e a forma de pagamento' });
+  if (d.st_pag === 'PAGO' && (d.vlr_cobrar !== undefined || d.tp_pag_prev !== undefined)) ctx.addIssue({ code: 'custom', message: 'Chamado pago não recebe valor nem forma de cobrança' });
+});
 export async function transacao<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   for (let tentativa = 0; ; tentativa++) {
     try { return await banco.$transaction(fn, { isolationLevel: 'Serializable' }); }
@@ -35,14 +39,18 @@ export async function criarPedido(ator: Ator, entrada: unknown, idAutor = ator.i
     const bairro = await tx.bai_bairros.findUnique({ where: { id_bai: dados.id_bai } });
     if (!empresa?.st_atv) throw new Falha(403, 'Empresa inativa ou ausente');
     if (!bairro?.st_atv) throw new Falha(422, 'Selecione um bairro permitido e ativo');
-    const taxa = bairro.vlr_tx_ent.plus(dados.st_ret ? bairro.vlr_tx_ret : 0);
+    const tarifa = await tx.tx_taxas_empresas.findUnique({ where: { id_emp_id_bai: { id_emp: empresa.id_emp, id_bai: bairro.id_bai } } }) ?? bairro;
+    const taxa = tarifa.vlr_tx_ent.plus(dados.st_ret ? tarifa.vlr_tx_ret : 0);
+    const total = new Prisma.Decimal(dados.vlr_cobrar ?? 0);
+    if (dados.st_pag === 'A_RECEBER' && total.lessThan(taxa)) throw new Falha(422, 'O total a recolher deve incluir a taxa de entrega');
     const ganho = bairro.vlr_ganho_ent.plus(dados.st_ret ? bairro.vlr_ganho_ret : 0);
     const pedido = await tx.ped_pedidos.create({ data: {
       ...dados, id_usr: ator.id_usr, id_emp: empresa.id_emp, resumo_req: resumo,
       end_loja: { logradouro: empresa.log_emp, numero: empresa.num_emp, complemento: empresa.cmp_emp,
         bairro: empresa.bai_emp, cidade: empresa.cid_emp, uf: empresa.uf_emp },
       vlr_tx: taxa, vlr_ganho_ent: ganho,
-      vlr_cobrar: dados.st_pag === 'A_RECEBER' ? new Prisma.Decimal(dados.vlr_prod).plus(taxa) : 0,
+      vlr_prod: dados.st_pag === 'A_RECEBER' ? total.minus(taxa) : 0,
+      vlr_cobrar: total,
     } });
     await tx.log_historico_pedidos.create({ data: { id_ped: pedido.id_ped, id_usr: idAutor, acao: 'CRIACAO', dados_nov: { st_ped: pedido.st_ped, vlr_tx: taxa.toFixed(2) } } });
     return pedido;
