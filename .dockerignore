@@ -5,3 +5,5 @@ dist
 .env.*
 coverage
 apps
+web
+entrega

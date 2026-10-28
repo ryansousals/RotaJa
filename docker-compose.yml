@@ -47,6 +47,22 @@ services:
     depends_on:
       migracao: {condition: service_completed_successfully}
       cache: {condition: service_healthy}
+      seed: {condition: service_completed_successfully}
+  seed:
+    build: {context: ., target: migracao}
+    command: [npx, tsx, prisma/seed.ts]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@rotaja.local}
+      ADMIN_SENHA: ${ADMIN_SENHA:?configure .env}
+    depends_on:
+      migracao: {condition: service_completed_successfully}
+  web:
+    build: ./web
+    restart: unless-stopped
+    ports: ["127.0.0.1:${WEB_PORT:-3002}:80"]
+    depends_on:
+      api: {condition: service_healthy}
 volumes:
   dados_pg:
   dados_redis:

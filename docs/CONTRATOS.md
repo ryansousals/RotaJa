@@ -10,7 +10,7 @@
 | GET /bairros | Autenticado | Select permitido |
 | POST /bairros | Operação | Preços e ganhos |
 | POST /pedidos | Remetente | Abertura idempotente |
-| GET /pedidos?pagina=1 | Autenticado | Lista de 30, com escopo por usuário |
+| GET /pedidos?pagina=1 | Autenticado | Lista de 20, com total, páginas e escopo por usuário |
 | GET /pedidos/:id | Autenticado | Detalhe autorizado |
 | PATCH /pedidos/:id | Operação | Correção com versão e motivo |
 | GET /pedidos/:id/historico | Operação | Auditoria |
@@ -37,6 +37,20 @@ Entregador: alvos de toque grandes, contraste, ações sequenciais. Mostrar os d
 
 ## Usar os exemplos
 
-Crie duas aplicações Next.js com TypeScript e Tailwind e instale `socket.io-client`. Copie `exemplos/web` e renderize os componentes após login, passando `api` e `token`. Os exemplos não fazem parte da compilação da API. Complete modal de detalhes, autenticação visual, filtros, busca, todas as páginas e mapa antes de publicar.
+A aplicação web integrada está em `web/`. Execute `iniciar.bat` para usar em http://localhost:3002. Os componentes de `exemplos/web` são referências da primeira versão e não fazem parte da aplicação atual.
 
 Crie um aplicativo Expo TypeScript e instale `expo-location`, `expo-task-manager` e `expo-secure-store`. Copie o config e os módulos de `exemplos/mobile`. Grave token de login em SecureStore. Importe rastreamento no ponto de entrada, inicie após aceite e pare na conclusão, cancelamento ou logout. Use URL HTTPS acessível pelo aparelho; localhost do telefone não aponta para o computador. O componente `AcaoCorrida` recebe forma de recebimento selecionada pela tela pai e reconsulta o pedido em `atualizar`.
+
+## Contratos do frontend integrado
+
+- `GET /autenticacao/eu`: identidade e perfis vinculados; sessão por cookie HttpOnly ou Bearer.
+- `GET /painel`: contagem de pedidos por status com escopo do perfil.
+- `POST /cadastros/empresa` e `/cadastros/entregador`: usuário e parceiro criados atomicamente.
+- `GET /usuarios`, `PATCH /usuarios/:id`: listagem e ativação controlada; não permite desativar administrador ou a própria conta.
+- `PATCH /bairros/:id`, `PATCH /entregadores/:id`: atualização operacional.
+- `POST /operacao/pedidos`: `{id_emp,pedido}`; abertura pelo operador, com auditoria do autor real.
+- `GET /pedidos`: filtros `busca`, `status` e `pagina`; `ATIVOS` exclui concluídos e cancelados.
+- `GET /pedidos/:id/gps`: última posição recente autorizada ou null.
+- `GET /financeiro?inicio=ISO&fim=ISO`: resumo do período, caixas e repasses, sempre limitados ao perfil.
+
+Na web, chamadas usam `/api` na mesma origem. Socket autentica pelo cookie e também aceita `auth.token` de integrações. Cadastros gerenciais incluem inativos; abertura de pedidos aceita somente bairro e empresa ativos. O cliente nunca escolhe remetente arbitrário.

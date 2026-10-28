@@ -4,9 +4,10 @@
 
 ```mermaid
 flowchart LR
-  ADM[Next.js Operação] --> API[API Express TypeScript]
-  CLI[Next.js Remetente] --> API
-  ENT[Expo Entregador] --> API
+  ADM[React Operação] --> PROXY[Nginx / Vite]
+  CLI[React Remetente] --> PROXY
+  ENT[React Entregador responsivo] --> PROXY
+  PROXY --> API[API Express TypeScript]
   ADM <--> WS[Socket.IO]
   CLI <--> WS
   ENT <--> WS
@@ -18,7 +19,7 @@ flowchart LR
 
 Monólito modular inicialmente: cadastros, autenticação, pedidos, despacho, rastreamento e financeiro. HTTP e socket compartilham os mesmos serviços e autorização. A divisão em serviços independentes só se justifica por demanda medida; banco e transações preservam a consistência financeira.
 
-Estrutura atual: `src/dominio.ts` contém regras puras, `src/servicos.ts` transações e validações, `src/servidor.ts` transporte e autenticação. Na evolução, separar cada domínio em controller/service/repository e compartilhar contratos em `packages/contratos`. Aplicações planejadas: `apps/operacao`, `apps/cliente` e `apps/entregador`. Os componentes em `exemplos/` são pontos de partida para essas aplicações.
+Estrutura atual: `src/dominio.ts` contém regras puras, `src/servicos.ts` transações e validações, `src/servidor.ts` transporte e autenticação e `src/painel.ts` consultas e cadastros integrados. `web/` é uma aplicação React/Vite/Tailwind com navegação e recursos conforme o perfil. Nginx entrega os arquivos compilados e encaminha API e WebSocket na mesma origem. React com Vite foi escolhido para o painel privado, que não depende de renderização no servidor. O caminho de execução local é `iniciar.bat`, com Docker Compose incluindo migração e seed. `exemplos/` preserva referências da primeira versão; o frontend executável está em `web/src/`.
 
 ## Dados e contas
 
@@ -50,7 +51,7 @@ Fechamento calcula valores; quitação exige comprovante e usuário validador no
 
 ## Tempo real e segurança
 
-Tokens opacos aleatórios expiram em uma hora, hashes são chaves Redis, senha usa bcrypt. Requisições consultam usuário ativo; logout revoga token. Socket revalida a sessão antes de comandos, mas assinaturas só se encerram por prazo máximo de uma hora: invalidação imediata das conexões ao revogar sessão é melhoria necessária antes de produção com requisitos rígidos. Payloads de atualização contêm metadados mínimos. Nunca aceitar nomes de salas enviados pelo cliente. Cada sessão entra em `usr:ID` e, se operador, `operacao`.
+Tokens opacos aleatórios expiram em uma hora, hashes são chaves Redis e senha usa bcrypt. O frontend usa cookie HttpOnly/SameSite Strict e não armazena token no localStorage. Integrações podem usar Bearer. Requisições consultam usuário ativo; logout revoga token, limpa cookie e desconecta os sockets daquela sessão. WebSocket e mutações HTTP validam Origin quando presente. `COOKIE_SEGURO=true` deve ser configurado ao publicar com HTTPS; o ambiente local usa HTTP em loopback. Payloads de atualização contêm metadados mínimos. Salas são definidas no servidor, por usuário, sessão e operação.
 
 O adapter Redis distribui eventos entre instâncias, sem persistência nem recuperação de eventos perdidos. Interfaces reconsultam HTTP após reconectar. Para evitar a janela entre commit e emissão em produção, implementar outbox transacional e worker com deduplicação por evento/versão. Esta base pode perder uma notificação se o processo falhar após o commit; o pedido persiste e a reconsulta recupera o estado. Transporte exclusivo WebSocket evita necessidade de afinidade por long-polling; proxies precisam permitir upgrade e ter timeout compatível.
 
@@ -60,6 +61,6 @@ Redis e PostgreSQL ficam na rede interna do Compose, com publicação local para
 
 ## Limites e etapas seguintes
 
-Entregue: backend de referência compilável, schema, migração, testes das regras de caixa, infraestrutura e componentes ilustrativos. Não entregue como produto concluído: três apps instaláveis, mapas/provedor de rotas, push em segundo plano, relatórios completos, recuperação de senha, refresh token, validação de dígitos CPF/CNPJ, proteção distribuída de login, extratos e ajustes contábeis, testes end-to-end e deploy público.
+Entregue: backend, schema e migração; frontend web integrado com três perfis, busca, filtros, paginação, detalhes, edição e auditoria; cadastro transacional de parceiro e usuário; financeiro e CSV; integração GPS com mapa sob demanda; infraestrutura e testes de domínio, API e navegador. O nativo Expo permanece como referência, sem APK/IPA homologado. Continuam pendentes push nativo, roteirização, recuperação de senha, validação dos dígitos CPF/CNPJ, proteção distribuída de login, ajustes contábeis e deploy público.
 
-Próximas fases: montar apps Next/Expo; completar detalhes, filtros e paginação visual; testar integração com banco/Redis; adicionar outbox, comprovantes e ledger financeiro; homologar em aparelhos reais; conduzir revisão de segurança e piloto acompanhado. Os prints são referência de fluxo, sem acesso ao software original ou reutilização de identidade visual.
+Próximas fases: concluir aplicativo Expo, adicionar outbox e ledger financeiro, homologar em aparelhos reais, revisar segurança e realizar piloto acompanhado. Os prints são referência de fluxo, sem acesso ao software original ou reutilização de identidade visual.

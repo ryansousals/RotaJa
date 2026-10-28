@@ -1,76 +1,76 @@
-# RotaJá — gestão de entregas
+# RotaJá · Central de entregas
 
-Base de referência em TypeScript com API Express, PostgreSQL/Prisma, Redis e Socket.IO. Inclui arquitetura, migração inicial, Docker e exemplos React/Next e Expo inspirados nos fluxos dos prints fornecidos.
+Projeto integrado: React + TypeScript + Tailwind, Express, PostgreSQL/Prisma, Redis e Socket.IO. Interface em português para operação, cliente e entregador.
 
-## Escopo entregue
+## Rodar localmente
 
-A API implementa sessões, usuários, empresas, entregadores, bairros, pedidos, edição administrativa auditada, despacho, estados da corrida, GPS, fechamento de caixa e repasses. `exemplos/` contém componentes de integração, não aplicações completas publicadas. Leia as limitações em [arquitetura](docs/ARQUITETURA.md) antes de usar dados reais.
+1. Abra o Docker Desktop e aguarde iniciar (contêineres Linux).
+2. Na pasta do projeto, dê dois cliques em **iniciar.bat**. Alternativa: `npm run local`.
+3. Abra **http://localhost:3002**.
+4. Entre com **ADMIN_EMAIL** e **ADMIN_SENHA** do arquivo **.env** na raiz.
 
-## Iniciar no Windows
+A primeira execução cria a configuração com senhas aleatórias, compila os serviços, aplica migrações e cria o administrador. O caminho por iniciar.bat não exige Node instalado: tudo roda no Docker. O seed preserva a senha do administrador existente. Credenciais não entram no Git nem no pacote de entrega.
 
-Requisitos: Node 22+, npm e Docker Desktop com contêineres Linux.
-
-Inicialização automatizada: `npm run local`. O script cria `.env` com senhas aleatórias se necessário, sobe os contêineres, instala as dependências locais e cria o administrador. O banco usa a porta local **55432** para evitar conflito com instalações existentes. Credenciais ficam apenas no `.env`, ignorado pelo Git. Para trocar a senha de um volume já inicializado é necessário alterar a senha também no banco; editar `.env` sozinho não altera dados existentes.
+A porta 3002 evita conflito com outro projeto nesta máquina. Para alterar, configure WEB_PORT e WEB_ORIGINS no .env. Banco: localhost:55432. API: http://localhost:3001/saude. Redis: localhost:6379. Todos os serviços são publicados apenas localmente.
 
 ```powershell
-Copy-Item .env.example .env
-# Edite .env: senhas, origens e endereço do administrador.
+docker compose ps
+docker compose logs --tail 30 api web
+docker compose stop
+docker compose up -d --wait
+```
+
+Os volumes preservam os dados. Não exclua os volumes para atualizar o código. Editar senhas no .env não altera automaticamente senhas de bancos e usuários já existentes.
+
+## Recursos
+
+- **Operação:** indicadores, busca, filtros, paginação, despacho inline, detalhes e auditoria, edição justificada, cancelamento e status, abertura em nome da loja, cadastros de empresas/entregadores/bairros/usuários, tarifas, ativação, caixa, repasses, conferência e CSV.
+- **Cliente:** abertura de chamados, bairro permitido, coleta ou entrega, retorno, pago/a receber, acompanhamento dos próprios pedidos e consulta de repasses.
+- **Entregador:** interface responsiva, aceite, coleta, chegada, entrega, retorno, recebimento, localização com a página aberta, consulta e fechamento do próprio caixa.
+
+Empresa e entregador são cadastrados junto com o usuário em uma transação. O menu Ajuda explica o ciclo. Sem chamados ativos, use Nova chamada como operador ou entre pelo usuário da loja. Não há auto-cadastro público.
+
+## Financeiro
+
+A_RECEBER cobra produto + frete; PAGO considera pagamento na loja. Ganho do entregador difere da taxa comercial. Na conclusão, a forma de recebimento distingue dinheiro em custódia de pagamento direto à loja.
+
+**Caixa = dinheiro recebido − ganhos de frete.** R$ 1.000 − R$ 70 = R$ 930 para o ADM. Saldo negativo indica crédito do entregador. Repasse à loja desconta os fretes do período e considera dinheiro recebido pela central. Quitação é conferência contábil, sem transferência bancária.
+
+## Desenvolvimento e testes
+
+Instale Node.js 22+ para editar e testar:
+
+```powershell
 npm ci
 npm run db:gerar
-docker compose up -d db cache
-npx prisma migrate deploy
-npm run db:seed
-npm run dev
-```
-
-API: `http://localhost:3001/saude`. Para contêineres: `docker compose up --build -d`. O serviço `migracao` aplica o schema antes da API. A criação do administrador é explícita: execute o seed pelo host com o banco acessível. Nunca use uma senha de exemplo em produção. Caracteres especiais da senha precisam ser codificados na URL de conexão; no Compose, prefira senha aleatória alfanumérica ou altere a montagem da URL para secrets.
-
-```powershell
+npm --prefix web ci
 npm run build
 npm test
-npx prisma validate
+npm run build:web
 npm run test:integracao
+npm --prefix web exec playwright install chromium
+npm run test:e2e
 ```
 
-O teste integrado exige os serviços e o administrador ativos e cria registros sintéticos identificados como teste: loja, entregador, bairro, pedido concluído, caixa e repasse quitados. Ele verifica o despacho real por WebSocket, idempotência, restrição de bairro e revogação de sessão. Os registros são preservados para inspeção; execute apenas na base local de desenvolvimento.
+Os testes integrados exigem a stack ativa e criam dados sintéticos preservados para inspeção. Não use a base de produção. Credenciais são lidas do .env sem impressão. Ao repetir testes rapidamente, um 429 exige aguardar a janela de requisições.
 
-Para consultar os serviços: `docker compose ps`. Para parar preservando dados: `docker compose stop`. Para voltar a iniciar: `docker compose up -d`. Não há aplicação web completa na porta 3000 nesta entrega: o serviço executável é a API na porta 3001.
+Para atualização automática, mantenha banco/cache ativos e pare os contêineres api/web; execute `npm run dev` e `npm run dev:web` em terminais separados. O frontend usa a porta 3002 e encaminha /api e /socket.io à API. Para voltar ao modo completo, execute iniciar.bat.
 
-## Primeiro fluxo
+## Estrutura
 
-1. `POST /autenticacao/entrar` com `eml_usr` e `senha`; envie o token retornado em `Authorization: Bearer TOKEN`.
-2. Operador cria usuários via `POST /usuarios`, vinculando remetente em `/empresas` e entregador em `/entregadores`.
-3. Operador cria `/bairros` com preços e ganhos, inclusive valores de retorno.
-4. Remetente consulta `/bairros`, abre `/pedidos` e acompanha `/pedidos` e os eventos.
-5. Operador usa `pedido:despachar` no socket autenticado; entregador avança por `POST /pedidos/status`.
-6. Ao concluir, registre `tp_rec` quando houver cobrança. Encerre o período em `/caixas/fechar` e confirme a prestação em `/caixas/:id/quitar`.
+- src/: API e regras de negócio.
+- prisma/: schema em português, migrações e seed.
+- web/src/: aplicação React integrada.
+- web/tests/: testes desktop e mobile.
+- web/nginx.conf: proxy HTTP/WebSocket.
+- scripts/: inicialização e testes da API.
+- exemplos/mobile/: integração Expo de referência.
+- docs/: arquitetura, contratos e validação.
 
-Exemplo de abertura (dinheiro enviado como string decimal):
+## Limites
 
-```json
-{
-  "id_bai": "UUID_DO_BAIRRO",
-  "chave_idem": "identificador-unico-do-formulario",
-  "nom_dest": "Maria Silva",
-  "tel_dest": "5589999999999",
-  "log_dest": "Rua das Flores",
-  "num_dest": "120",
-  "tp_end": "ENTREGA",
-  "st_ret": false,
-  "st_pag": "A_RECEBER",
-  "vlr_prod": "93.00"
-}
-```
+O frontend entregue é web responsivo para os três perfis. A integração Expo permanece como referência; não há APK/IPA homologado. GPS web exige permissão e funciona enquanto o detalhe da corrida estiver aberto. Posições expiram após dois minutos. O mapa OpenStreetMap exige internet e só carrega ao clicar em Ver no mapa.
 
-Com frete de R$ 7,00, a cobrança será R$ 100,00. O cliente não envia taxa nem ganho do motoboy: a API obtém os valores do bairro e guarda o snapshot no pedido. Reenvios devem preservar a chave e os dados; altere a chave quando editar o formulário após uma tentativa rejeitada ou um pedido criado.
+Não há transferência bancária, conferência automática de PIX, estornos, recuperação de senha ou push nativo. Pedidos encerrados não são reescritos. Publicação externa exige TLS, segredos gerenciados, backups, monitoramento e as demais medidas descritas em docs/ARQUITETURA.md.
 
-## Arquivos
-
-- [Schema em português](prisma/schema.prisma)
-- [Infraestrutura](docker-compose.yml) e [Dockerfile](Dockerfile)
-- [Serviços de domínio](src/servicos.ts) e [API e sockets](src/servidor.ts)
-- [Arquitetura, segurança e evolução](docs/ARQUITETURA.md)
-- [Contratos e interfaces](docs/CONTRATOS.md)
-- [Git e commits em português](docs/GIT.md)
-
-Referências técnicas: [Prisma 6 / PostgreSQL](https://www.prisma.io/docs/orm/v6/overview/databases/postgresql), [transações](https://www.prisma.io/docs/orm/v6/prisma-client/queries/transactions), [Socket.IO Redis adapter](https://socket.io/docs/v4/redis-adapter). As versões foram fixadas no projeto para permitir reprodução; atualizações devem passar por revisão e testes.
+Referências: [Vite](https://vite.dev/guide/), [Tailwind](https://tailwindcss.com/docs/installation/using-vite), [Socket.IO](https://socket.io/docs/v4/redis-adapter), [Prisma 6](https://www.prisma.io/docs/orm/v6/overview/databases/postgresql).
