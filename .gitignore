@@ -10,3 +10,7 @@ coverage/
 .DS_Store
 *.pem
 backups/
+*.tsbuildinfo
+test-results/
+playwright-report/
+entrega/
