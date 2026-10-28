@@ -29,3 +29,11 @@ O nativo Expo continua como integração de referência, sem homologação em ap
 ### Dependências de ferramentas
 
 A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/config`, `deepmerge-ts`, `effect`). Não foi aplicado upgrade forçado para Prisma 7, que exige adaptação própria. O CLI processa apenas o schema e a configuração locais nesta stack. A migração de versão deve ser planejada antes de publicação em produção. Os demais alertas identificados nas dependências diretas Vite, Zod e express-rate-limit foram corrigidos nesta entrega.
+
+### Ajuste: tarifas por empresa e cobrança total
+
+- Compilações da API e web aprovadas; 4 testes unitários aprovados.
+- Teste integrado aprovado: duas lojas veem o mesmo bairro com preços efetivos diferentes; alteração de tarifas por loja e operador é negada; ADM não abre chamadas; pedidos pagos não aceitam cobrança; retorno usa adicional da loja; total abaixo da taxa é rejeitado; mudança de tarifa preserva o pedido anterior.
+- 3 testes de navegador aprovados: administrador salva taxa específica de R$ 9, loja vê essa taxa em ambos os modos de pagamento, total de R$ 100 não recebe acréscimo, entregador conclui, caixa permanece R$ 93 (ganho do motoboy R$ 7) e repasse à loja é R$ 91 (taxa comercial R$ 9).
+- Capturas dos formulários Pago e A receber inspecionadas. Teste mobile usa preferência por animações reduzidas para estabilizar a interação com o menu lateral.
+- Migração aplicada pelo Docker sem recriar volumes. Serviços locais continuam ativos em localhost:3002.

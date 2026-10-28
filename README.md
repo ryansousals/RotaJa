@@ -28,11 +28,11 @@ Os volumes preservam os dados. Não exclua os volumes para atualizar o código. 
 - **Cliente:** abertura de chamados, bairro permitido, coleta ou entrega, retorno, pago/a receber, acompanhamento dos próprios pedidos e consulta de repasses.
 - **Entregador:** interface responsiva, aceite, coleta, chegada, entrega, retorno, recebimento, localização com a página aberta, consulta e fechamento do próprio caixa.
 
-Empresa e entregador são cadastrados junto com o usuário em uma transação. O menu Ajuda explica o ciclo. Sem chamados ativos, use Nova chamada como operador ou entre pelo usuário da loja. Não há auto-cadastro público.
+Empresa e entregador são cadastrados junto com o usuário em uma transação. O menu Ajuda explica o ciclo. Somente a loja abre chamadas, usando seu próprio acesso. Não há auto-cadastro público.
 
 ## Financeiro
 
-A_RECEBER cobra produto + frete; PAGO considera pagamento na loja. Ganho do entregador difere da taxa comercial. Na conclusão, a forma de recebimento distingue dinheiro em custódia de pagamento direto à loja.
+A_RECEBER recebe o total a recolher, já incluindo a taxa (sem somá-la novamente), e a forma de pagamento prevista. PAGO não solicita valor de produtos ou cobrança: mostra somente a taxa. Ganho do entregador difere da taxa comercial. Na conclusão, a forma de recebimento distingue dinheiro em custódia de pagamento direto à loja.
 
 **Caixa = dinheiro recebido − ganhos de frete.** R$ 1.000 − R$ 70 = R$ 930 para o ADM. Saldo negativo indica crédito do entregador. Repasse à loja desconta os fretes do período e considera dinheiro recebido pela central. Quitação é conferência contábil, sem transferência bancária.
 
@@ -74,3 +74,9 @@ O frontend entregue é web responsivo para os três perfis. A integração Expo 
 Não há transferência bancária, conferência automática de PIX, estornos, recuperação de senha ou push nativo. Pedidos encerrados não são reescritos. Publicação externa exige TLS, segredos gerenciados, backups, monitoramento e as demais medidas descritas em docs/ARQUITETURA.md.
 
 Referências: [Vite](https://vite.dev/guide/), [Tailwind](https://tailwindcss.com/docs/installation/using-vite), [Socket.IO](https://socket.io/docs/v4/redis-adapter), [Prisma 6](https://www.prisma.io/docs/orm/v6/overview/databases/postgresql).
+
+## Taxas por loja e cobrança inclusiva
+
+Em **Empresas parceiras → Taxas por bairro**, o administrador escolhe o bairro e salva a taxa de entrega e o adicional de retorno exclusivos da loja. Todos os bairros ativos continuam disponíveis para todas as lojas. Sem personalização, vale a taxa padrão do bairro. Alterar o padrão afeta somente próximas chamadas de lojas sem personalização; alterar uma tarifa da loja não modifica pedidos existentes. Os ganhos do entregador continuam definidos no cadastro do bairro.
+
+Na abertura, somente a loja autenticada pode criar o pedido. **Pago** mostra a taxa, sem campo de valor. **A receber** solicita forma de pagamento e o total a recolher, incluindo a taxa; a taxa aparece separada para conferência. Exemplo: total R$ 100 e taxa R$ 7 resultam em cobrança de R$ 100 e produto calculado de R$ 93. A forma prevista é confirmada pelo entregador na conclusão.

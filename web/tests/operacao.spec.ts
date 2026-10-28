@@ -14,6 +14,7 @@ async function login(page: Page, email: string, password: string) {
 }
 test('operação, cliente e entregador completam um pedido real pelo frontend', async ({ page, browser }) => {
   await login(page, process.env.ADMIN_EMAIL!, process.env.ADMIN_SENHA!);
+  await expect(page.getByRole('button', { name: 'Nova chamada' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Empresas parceiras', exact: true }).click();
   await page.getByRole('button', { name: 'Cadastrar empresa' }).click();
   await page.getByLabel('Nome do responsável').fill('Loja Web '+sufixo);
@@ -31,8 +32,15 @@ test('operação, cliente e entregador completam um pedido real pelo frontend', 
   await page.getByRole('link', { name: 'Bairros e tarifas', exact: true }).click(); await page.getByRole('button', { name: 'Cadastrar bairro' }).click();
   await page.getByLabel('Nome do bairro').fill('Bairro Web '+sufixo); await page.getByLabel('Cidade').fill('Floriano'); await page.getByLabel('UF').fill('PI');
   await page.getByRole('button', { name: 'Salvar cadastro' }).click(); await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Empresas parceiras', exact: true }).click();
+  await page.getByRole('row').filter({ hasText: 'Loja Web '+sufixo }).getByRole('button', { name: 'Taxas por bairro' }).click();
+  await page.getByLabel('Bairro', { exact: false }).selectOption({ label: 'Bairro Web '+sufixo });
+  await page.getByLabel('Taxa de entrega (R$)').fill('9.00');
+  await page.getByRole('button', { name: 'Salvar taxas da loja' }).click();
+  await expect(page.getByRole('dialog').getByRole('status')).toContainText('Taxas desta loja atualizadas');
+  await page.getByRole('button', { name: 'Fechar', exact: true }).click();
   const clienteContexto = await browser.newContext(); const cliente = await clienteContexto.newPage();
-  const motoContexto = await browser.newContext({ viewport: { width: 390, height: 844 } }); const moto = await motoContexto.newPage();
+  const motoContexto = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' }); const moto = await motoContexto.newPage();
   try {
     await login(cliente, lojaEmail, senha); await cliente.reload(); await expect(cliente.getByRole('heading', { name: 'Minhas chamadas' })).toBeVisible();
     await expect(cliente.getByRole('link', { name: 'Empresas parceiras' })).toHaveCount(0);
@@ -40,7 +48,9 @@ test('operação, cliente e entregador completam um pedido real pelo frontend', 
     await cliente.getByRole('button', { name: 'Nova chamada' }).click();
     await cliente.getByLabel('Nome completo do destinatário').fill('Destinatário Web '+sufixo); await cliente.getByLabel('Telefone com DDD').fill('5589999999002');
     await cliente.getByLabel('Bairro permitido').selectOption({ label: 'Bairro Web '+sufixo }); await cliente.getByLabel('Rua / Logradouro').fill('Rua do destino'); await cliente.getByLabel(/^Número/).fill('25');
-    await cliente.getByLabel('Pagamento').selectOption('A_RECEBER'); await cliente.getByLabel('Valor dos produtos').fill('93');
+    await expect(cliente.locator('.orcamento')).toContainText('R$ 9,00'); await cliente.screenshot({ path: 'test-results/chamada-paga.png', fullPage: true });
+    await expect(cliente.getByLabel('Total a recolher')).toHaveCount(0); await expect(cliente.getByLabel('Forma de pagamento')).toHaveCount(0);
+    await cliente.getByLabel('Pagamento', { exact: false }).selectOption('A_RECEBER'); await cliente.getByLabel('Forma de pagamento').selectOption('DINHEIRO'); await cliente.getByLabel('Total a recolher').fill('100'); await cliente.screenshot({ path: 'test-results/chamada-a-receber.png', fullPage: true });
     await cliente.getByRole('button', { name: 'Abrir chamada', exact: true }).click(); await expect(cliente.getByRole('dialog')).toHaveCount(0);
     await expect(cliente.getByText('Destinatário Web '+sufixo,{exact:true})).toBeVisible();
     await page.getByRole('link', { name: 'Visão operacional' }).click(); await page.getByLabel('Buscar pedidos').fill('Destinatário Web '+sufixo);
@@ -99,7 +109,7 @@ test('caixa e repasse são gerados e conferidos pelas telas financeiras', async 
     await admin.getByRole('button', { name: 'Gerar fechamento' }).click();
     await expect(admin.getByRole('dialog')).toHaveCount(0);
     const linhaRepasse = admin.getByRole('row').filter({ hasText: 'Loja Web '+sufixo });
-    await expect(linhaRepasse.getByText('R$ 93,00', { exact: true })).toBeVisible();
+    await expect(linhaRepasse.getByText('R$ 91,00', { exact: true })).toBeVisible();
     await linhaRepasse.getByRole('button', { name: 'Conferir' }).click();
     await admin.getByLabel('Referência do comprovante').fill('repasse-web-'+sufixo);
     await admin.getByRole('button', { name: 'Confirmar quitação' }).click();

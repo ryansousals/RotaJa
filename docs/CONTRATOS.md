@@ -8,7 +8,7 @@
 | POST, GET /empresas; PATCH /empresas/:id | Operação | Gestão de lojas |
 | POST, GET /entregadores | Operação | Cadastro e lista para despacho |
 | GET /bairros | Autenticado | Select permitido |
-| POST /bairros | Operação | Preços e ganhos |
+| POST /bairros; PATCH /bairros/:id | Administrador | Preços padrão e ganhos |
 | POST /pedidos | Remetente | Abertura idempotente |
 | GET /pedidos?pagina=1 | Autenticado | Lista de 20, com total, páginas e escopo por usuário |
 | GET /pedidos/:id | Autenticado | Detalhe autorizado |
@@ -47,10 +47,18 @@ Crie um aplicativo Expo TypeScript e instale `expo-location`, `expo-task-manager
 - `GET /painel`: contagem de pedidos por status com escopo do perfil.
 - `POST /cadastros/empresa` e `/cadastros/entregador`: usuário e parceiro criados atomicamente.
 - `GET /usuarios`, `PATCH /usuarios/:id`: listagem e ativação controlada; não permite desativar administrador ou a própria conta.
-- `PATCH /bairros/:id`, `PATCH /entregadores/:id`: atualização operacional.
-- `POST /operacao/pedidos`: `{id_emp,pedido}`; abertura pelo operador, com auditoria do autor real.
+- `PATCH /entregadores/:id`: atualização operacional; bairros e preços são exclusivos do administrador.
+- `POST /operacao/pedidos`: desabilitado (403). Apenas lojas abrem chamadas em `POST /pedidos`.
 - `GET /pedidos`: filtros `busca`, `status` e `pagina`; `ATIVOS` exclui concluídos e cancelados.
 - `GET /pedidos/:id/gps`: última posição recente autorizada ou null.
 - `GET /financeiro?inicio=ISO&fim=ISO`: resumo do período, caixas e repasses, sempre limitados ao perfil.
 
 Na web, chamadas usam `/api` na mesma origem. Socket autentica pelo cookie e também aceita `auth.token` de integrações. Cadastros gerenciais incluem inativos; abertura de pedidos aceita somente bairro e empresa ativos. O cliente nunca escolhe remetente arbitrário.
+
+## Tarifas e abertura de chamadas
+
+`GET /empresas/:id/tarifas` (operação) lista todos os bairros e o preço efetivo da loja, com `personalizada`. `PUT /empresas/:id/tarifas/:bairro` (somente ADMINISTRADOR) recebe `{ "vlr_tx_ent": "9.00", "vlr_tx_ret": "4.00" }`. `GET /bairros` para REMETENTE já retorna os valores efetivos da própria loja, sem selecionar outra empresa.
+
+O corpo de `POST /pedidos` mantém os dados de endereço, bairro, retorno e chave idempotente. Para `PAGO`, omitir `vlr_cobrar` e `tp_pag_prev`. Para `A_RECEBER`, informar ambos: `vlr_cobrar: "100.00"` é o total inclusivo e `tp_pag_prev` aceita `DINHEIRO`, `PIX_LOJA`, `CARTAO_LOJA`. O total não pode ser inferior à taxa; `vlr_prod` não é aceito na entrada, sendo calculado no servidor. `PATCH /pedidos/:id` também usa total inclusivo; somente ADM altera campos financeiros, com motivo e versão. Operadores ainda podem corrigir dados de endereço.
+
+A migração adiciona `tx_taxas_empresas` com chave composta empresa/bairro e `tp_pag_prev` opcional em pedidos, preservando histórico e recebimentos existentes. Pedidos antigos não terão forma prevista preenchida artificialmente.

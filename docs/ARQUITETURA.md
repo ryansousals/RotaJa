@@ -41,7 +41,7 @@ Aceite valida o entregador atual. Redespacho só ocorre antes do aceite. Versão
 
 ## Financeiro
 
-Premissa comercial explícita: A_RECEBER cobra produto + frete; PAGO significa produto + frete pagos na loja. Cobrar apenas taxa pode ser representado com produto zero. Cobrar apenas parte do produto ou pagamento misto exige tabela de parcelas/recebimentos futura. Pagamento PIX_LOJA/CARTAO_LOJA ocorre direto à loja, sem dinheiro sob custódia do motoboy. PIX para a conta do entregador não é suportado nesta base.
+A_RECEBER recebe o total inclusivo de frete e calcula internamente o produto como total menos taxa. PAGO não recebe valor informado e mostra apenas a taxa. Cobrar apenas taxa usa total igual à taxa. Cobrar apenas parte do produto ou pagamento misto exige tabela de parcelas/recebimentos futura. Pagamento PIX_LOJA/CARTAO_LOJA ocorre direto à loja, sem dinheiro sob custódia do motoboy. PIX para a conta do entregador não é suportado nesta base.
 
 Caixa: `saldo ADM = soma dinheiro sob custódia − soma ganhos do motoboy`. Dez recebimentos de R$ 100 e dez ganhos de R$ 7 resultam em R$ 930. Ganho difere da taxa comercial e inclui adicional de retorno contratado. Saldo negativo significa que o ADM deve ao entregador. Nunca truncar em zero. Só corridas concluídas entram no caixa; pagamento e ganho ficam vinculados a um único fechamento. Períodos sobrepostos com pedidos já vinculados são rejeitados, fechamento repetido retorna o existente; transação serializável com repetição em conflito evita apropriação simultânea.
 
