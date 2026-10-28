@@ -5,6 +5,7 @@ export async function api<T>(rota: string, dados?: unknown, metodo = dados === u
   if (!resposta.ok) {
     if (resposta.status === 429) throw new ErroApi(429, `Muitas requisições. Aguarde ${resposta.headers.get('retry-after') ?? 'alguns'} segundos antes de tentar novamente.`);
     if (resposta.status === 401 && !rota.startsWith('/autenticacao/')) window.dispatchEvent(new Event('sessao-expirada'));
+    if (resposta.status === 423) window.dispatchEvent(new CustomEvent('acesso-bloqueado', { detail: corpo?.erro ?? 'Acesso temporariamente bloqueado' }));
     const campos = corpo?.campos?.fieldErrors;
     throw new ErroApi(resposta.status, campos ? [...Object.entries(campos).map(([nome, erros]) => `${nome}: ${(erros as string[]).join(', ')}`), ...(corpo.campos.formErrors ?? [])].join(' · ') || corpo.erro : corpo?.erro ?? 'Não foi possível concluir a operação');
   }

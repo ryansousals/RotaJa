@@ -94,3 +94,13 @@ O portal reúne:
 - Consulta das tarifas da própria loja e dos dados cadastrais. Somente o administrador altera taxas, inclusive pela API.
 
 O período é interpretado em America/Fortaleza. Chamadas são contadas por abertura; gastos de frete por conclusão; repasses recebidos por quitação. O saldo atual considera todo o histórico e não muda ao filtrar o período. PIX/cartão direto à loja não entram como dinheiro a repassar. Acertos negativos representam dívida da loja com a central. A quitação registra conferência e não realiza transferência bancária.
+
+## Controle administrativo de acesso
+
+Na tela de login, escolha **Entrar como ADM** ou **Entrar como Empresa**. Entregadores mantêm o acesso pelo link **Sou entregador**. A API valida se o perfil corresponde à opção escolhida; escolher ADM não concede privilégios. Integrações anteriores podem omitir `area`, sem mudar as permissões do usuário.
+
+No topo do painel do administrador, **Desligar empresas / Ligar empresas** controla o acesso de todas as lojas. É uma pausa geral persistida no banco, sem alterar os estados individuais das empresas. Ao desligar, lojas conectadas são avisadas e desconectadas; novas entradas e requisições ficam bloqueadas. Administradores, operadores e entregadores continuam trabalhando. Ao religar, empresas individualmente inativas ou excluídas permanecem bloqueadas.
+
+Em Empresas parceiras, o ícone de lixeira abre **Excluir empresa** com confirmação. A exclusão é lógica: remove a loja da listagem operacional, desativa seu usuário e preserva pedidos, valores pendentes e repasses. CPF/CNPJ e e-mail ficam reservados ao histórico; não é possível reativar a empresa excluída pelo botão comum de ativação. Quitações históricas continuam disponíveis à administração.
+
+Erros de cadastro agora diferenciam e-mail duplicado, CPF/CNPJ duplicado, vínculo de usuário, registro ausente e conflito concorrente. Um cadastro de empresa malsucedido não deixa usuário órfão. Os campos preenchidos permanecem no formulário para correção.

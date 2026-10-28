@@ -9,7 +9,7 @@ const senha = randomBytes(20).toString('hex');
 const lojaEmail = `web.loja.${sufixo}@teste.local`, entEmail = `web.ent.${sufixo}@teste.local`;
 const documento = (n: number) => Array.from(randomBytes(n), b => b % 10).join('');
 async function login(page: Page, email: string, password: string) {
-  await page.goto('/'); await page.getByLabel('E-mail', { exact: true }).fill(email); await page.getByLabel('Senha', { exact: true }).fill(password);
+  await page.goto('/'); if (email === lojaEmail) await page.getByRole('button', { name: 'Entrar como Empresa', exact: true }).click(); else if (email === entEmail) await page.getByRole('button', { name: 'Sou entregador', exact: true }).click(); await page.getByLabel('E-mail', { exact: true }).fill(email); await page.getByLabel('Senha', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Entrar na plataforma' }).click(); await expect(page.getByRole('button', { name: 'Sair da conta' })).toBeVisible();
 }
 test('operação, cliente e entregador completam um pedido real pelo frontend', async ({ page, browser }) => {
@@ -24,7 +24,7 @@ test('operação, cliente e entregador completam um pedido real pelo frontend', 
   await page.getByLabel('Rua / Logradouro').fill('Rua de teste web'); await page.getByLabel(/^Número/).fill('15');
   await page.getByLabel('Bairro da loja').fill('Centro'); await page.getByLabel('Cidade', { exact: false }).fill('Floriano'); await page.getByLabel('UF', { exact: false }).fill('PI');
   await page.getByRole('button', { name: 'Salvar cadastro' }).click(); await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('cell', { name: 'Loja Web '+sufixo, exact: false })).toBeVisible();
+  await expect(page.getByText('Loja Web '+sufixo, { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Entregadores', exact: true }).click(); await page.getByRole('button', { name: 'Cadastrar entregador' }).click();
   await page.getByLabel('Nome do responsável').fill('Moto Web '+sufixo); await page.getByLabel('E-mail de acesso').fill(entEmail); await page.getByLabel('Senha inicial').fill(senha);
   await page.getByLabel('CPF (somente números)').fill(documento(11)); await page.getByLabel('Placa da moto').fill('WEB1A23'); await page.getByLabel('Telefone com DDD').fill('5589999999001');
@@ -147,3 +147,31 @@ test('caixa e repasse são gerados e conferidos pelas telas financeiras', async 
   await page.screenshot({ path: 'test-results/portal-empresa-mobile.png', fullPage: true });
   await page.getByRole('link', { name: 'Nova chamada', exact: true }).click(); await expect(page.getByRole('dialog')).toBeVisible();
  });
+
+test('administrador confirma pausa geral e exclusão preservando o histórico', async ({ page }) => {
+  // Aguarda uma janela independente do limite global após os testes de operação.
+  await new Promise(resolve => setTimeout(resolve, 61000));
+  await login(page,process.env.ADMIN_EMAIL!,process.env.ADMIN_SENHA!);
+  const resposta = await page.request.get('/api/sistema/empresas'); const inicial = await resposta.json();
+  try {
+    await page.getByRole('button',{name:'Desligar empresas',exact:true}).click();
+    await page.getByRole('button',{name:'Confirmar alteração',exact:true}).click();
+    await expect(page.getByText('Sistema das empresas: desligado',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Ligar empresas',exact:true}).click();
+    await page.getByRole('button',{name:'Confirmar alteração',exact:true}).click();
+    await expect(page.getByText('Sistema das empresas: ligado',{exact:true})).toBeVisible();
+  } finally {
+    const cfg = await (await page.request.get('/api/sistema/empresas')).json();
+    if(cfg.st_emp_lig !== inicial.st_emp_lig) await page.request.patch('/api/sistema/empresas',{data:{st_emp_lig:inicial.st_emp_lig,versao:cfg.versao}});
+  }
+  await page.getByRole('link',{name:'Empresas parceiras',exact:true}).click();
+  await page.getByRole('button',{name:'Excluir empresa Loja Web '+sufixo,exact:true}).click();
+  await expect(page.getByText(/histórico financeiro serão preservados/)).toBeVisible();
+  await page.getByRole('button',{name:'Confirmar exclusão',exact:true}).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('row').filter({hasText:'Loja Web '+sufixo})).toHaveCount(0);
+  await page.getByRole('link',{name:'Visão operacional',exact:true}).click();
+  await page.getByRole('button',{name:'Concluídas',exact:true}).click();
+  await page.getByLabel('Buscar pedidos').fill('Destinatário Web '+sufixo);
+  await expect(page.getByText('Destinatário Web '+sufixo,{exact:true})).toBeVisible();
+});

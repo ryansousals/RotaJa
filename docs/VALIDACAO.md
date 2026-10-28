@@ -45,3 +45,11 @@ A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/
 - Segunda loja retorna somente seus próprios dados; tentativa de informar empresa arbitrária no resumo é rejeitada. Permissões existentes de tarifas continuam cobertas pelo teste integrado.
 - Quatro fluxos de navegador aprovados, incluindo acesso em `/empresa`, resumo de taxas e repasses, exportação CSV, consulta de tarifas sem edição, cadastro da loja e abertura de chamada pelo portal.
 - Datas de abertura, conclusão e quitação têm rótulos separados. Saldo atual inclui todo o histórico; não se confunde com o filtro de período.
+
+### Controle administrativo e correção de cadastro — 28/10/2026
+
+- API e web compilados; quatro testes unitários, integração completa de entregas e teste dedicado de controle aprovados.
+- Duplicidade de e-mail e CPF/CNPJ retorna mensagem específica; falha no cadastro composto não deixa usuário órfão. A mensagem genérica da imagem não permitia identificar com certeza o campo original em conflito; não houve remoção automática de cadastros existentes.
+- Cinco testes de navegador aprovados, incluindo as opções de login, controle geral com confirmação e exclusão de empresa fictícia preservando seu pedido concluído no histórico.
+- Teste de API verifica bloqueio de sessão existente e novos logins durante a pausa, acesso preservado do ADM, restauração do estado inicial, negação de exclusão por empresa e impossibilidade de reativação comum de cadastro excluído.
+- Capturas de login no celular e controle no painel inspecionadas. Proteções de limite de requisições mantidas; teste de controle aguarda uma janela separada após os testes de operação.

@@ -70,3 +70,14 @@ A migração adiciona `tx_taxas_empresas` com chave composta empresa/bairro e `t
 Retorna contagens por status/data de abertura, total histórico, ativos atuais, taxas e recebimentos por conclusão no período, repasses positivos quitados por data de pagamento e oito últimas chamadas. O saldo global é `soma(dinheiro - taxa dos concluídos sem repasse) + soma(repasses PENDENTE)`. Separado em `sem_fechamento` e `em_fechamento`; `a_receber` e `a_pagar` mostram a direção do saldo líquido. Fechamentos QUITADO não voltam ao saldo. Valores monetários são Decimal, serializados como strings.
 
 Frontend: `/empresa` abre o acesso de parceiros; o perfil REMETENTE inicia em `#resumo`, com `#entregas`, `#nova-chamada`, `#financeiro`, `#tarifas` (consulta) e `#conta` (consulta). Sessões e permissões são as mesmas do backend, sem privilégios derivados da URL.
+
+## Pausa geral e exclusão
+
+- Login aceita `area?: ADM | EMPRESA | ENTREGADOR`, validada contra o perfil após conferir a senha. ADM inclui ADMINISTRADOR/OPERADOR. Não cria ou promove usuários.
+- `GET /sistema/empresas`: somente ADM, retorna `st_emp_lig`, `versao`, data e autor da última alteração.
+- `PATCH /sistema/empresas`: somente ADM, `{st_emp_lig:boolean, versao:number}`. Versão desatualizada retorna 409; estado persistido em `cfg_sistema`.
+- `DELETE /empresas/:id`: somente ADM, exclusão lógica idempotente (204); preenche `dt_exc`, desativa empresa/usuário e desconecta a sala do usuário. Não remove pedidos nem repasses.
+- Todo acesso autenticado REMETENTE verifica o estado da empresa e a pausa geral. Estado bloqueado retorna 423; usuário desativado retorna 401. Conexões Socket.IO também validam o estado; `acesso:bloqueado` avisa o navegador antes da desconexão.
+- Na abertura de pedido, o estado geral é novamente verificado dentro da transação. Listagem de empresas exclui `dt_exc != null`; edição comum não alcança excluídas.
+
+Validação específica: `npx tsx scripts/verificar-controle.ts`. Executar apenas em ambiente de teste/local: cria uma empresa fictícia, pausa o acesso geral brevemente e restaura o estado anterior em `finally`. A empresa fictícia é excluída logicamente ao finalizar. Testes web de controle também restauram o estado anterior.
