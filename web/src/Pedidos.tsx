@@ -6,11 +6,11 @@ import type { Avisar } from './App';
 import { Badge, Campo, Formulario, Modal, Selecao, Vazio } from './ui';
 import { DetalhePedido } from './PedidoDetalhe';
 type Lista = { itens: Pedido[]; total: number; paginas: number; pagina: number };
-export function Pedidos({ usuario, revisao, atualizar, avisar, socket, online }: { usuario: Usuario; revisao: number; atualizar: () => void; avisar: Avisar; socket: Socket | null; online: boolean }) {
+export function Pedidos({ usuario, revisao, atualizar, avisar, socket, online, abrirNovo = false }: { abrirNovo?: boolean; usuario: Usuario; revisao: number; atualizar: () => void; avisar: Avisar; socket: Socket | null; online: boolean }) {
   const [lista, setLista] = useState<Lista>({ itens: [], total: 0, paginas: 1, pagina: 1 });
   const [entregadores, setEntregadores] = useState<Entregador[]>([]), [resumo, setResumo] = useState<Record<string, number>>({});
   const [filtro, setFiltro] = useState('ATIVOS'), [busca, setBusca] = useState(''), [termo, setTermo] = useState(''), [pagina, setPagina] = useState(1);
-  const [erro, setErro] = useState(''), [carregando, setCarregando] = useState(true), [novo, setNovo] = useState(false), [detalhe, setDetalhe] = useState<Pedido | null>(null);
+  const [erro, setErro] = useState(''), [carregando, setCarregando] = useState(true), [novo, setNovo] = useState(abrirNovo && usuario.tp_usr === 'REMETENTE'), [detalhe, setDetalhe] = useState<Pedido | null>(null);
   const [despachando, setDespachando] = useState<string | null>(null), [agora, setAgora] = useState(Date.now());
   const op = eOperador(usuario), campo = usuario.tp_usr === 'ENTREGADOR';
   useEffect(() => {

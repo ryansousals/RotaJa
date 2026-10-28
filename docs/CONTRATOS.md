@@ -62,3 +62,11 @@ Na web, chamadas usam `/api` na mesma origem. Socket autentica pelo cookie e tam
 O corpo de `POST /pedidos` mantém os dados de endereço, bairro, retorno e chave idempotente. Para `PAGO`, omitir `vlr_cobrar` e `tp_pag_prev`. Para `A_RECEBER`, informar ambos: `vlr_cobrar: "100.00"` é o total inclusivo e `tp_pag_prev` aceita `DINHEIRO`, `PIX_LOJA`, `CARTAO_LOJA`. O total não pode ser inferior à taxa; `vlr_prod` não é aceito na entrada, sendo calculado no servidor. `PATCH /pedidos/:id` também usa total inclusivo; somente ADM altera campos financeiros, com motivo e versão. Operadores ainda podem corrigir dados de endereço.
 
 A migração adiciona `tx_taxas_empresas` com chave composta empresa/bairro e `tp_pag_prev` opcional em pedidos, preservando histórico e recebimentos existentes. Pedidos antigos não terão forma prevista preenchida artificialmente.
+
+## Resumo exclusivo da empresa
+
+`GET /portal/resumo?inicio=ISO&fim=ISO` exige REMETENTE com empresa ativa. Intervalo inclusivo no início, exclusivo no fim, máximo de 366 dias. Não aceita `id_emp`: o escopo é obtido da sessão. Consulta usa transação RepeatableRead para evitar dupla contagem durante fechamento/quitação concorrentes.
+
+Retorna contagens por status/data de abertura, total histórico, ativos atuais, taxas e recebimentos por conclusão no período, repasses positivos quitados por data de pagamento e oito últimas chamadas. O saldo global é `soma(dinheiro - taxa dos concluídos sem repasse) + soma(repasses PENDENTE)`. Separado em `sem_fechamento` e `em_fechamento`; `a_receber` e `a_pagar` mostram a direção do saldo líquido. Fechamentos QUITADO não voltam ao saldo. Valores monetários são Decimal, serializados como strings.
+
+Frontend: `/empresa` abre o acesso de parceiros; o perfil REMETENTE inicia em `#resumo`, com `#entregas`, `#nova-chamada`, `#financeiro`, `#tarifas` (consulta) e `#conta` (consulta). Sessões e permissões são as mesmas do backend, sem privilégios derivados da URL.

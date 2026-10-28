@@ -37,3 +37,11 @@ A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/
 - 3 testes de navegador aprovados: administrador salva taxa específica de R$ 9, loja vê essa taxa em ambos os modos de pagamento, total de R$ 100 não recebe acréscimo, entregador conclui, caixa permanece R$ 93 (ganho do motoboy R$ 7) e repasse à loja é R$ 91 (taxa comercial R$ 9).
 - Capturas dos formulários Pago e A receber inspecionadas. Teste mobile usa preferência por animações reduzidas para estabilizar a interação com o menu lateral.
 - Migração aplicada pelo Docker sem recriar volumes. Serviços locais continuam ativos em localhost:3002.
+
+### Portal da empresa — 28/10/2026
+
+- API e frontend compilados. Quatro testes unitários e teste integrado aprovados.
+- Consulta da empresa validada antes do fechamento (R$ 93 sem fechamento), após gerar repasse (R$ 93 pendente, sem duplicação) e após quitação (saldo zero e recebido no período R$ 93).
+- Segunda loja retorna somente seus próprios dados; tentativa de informar empresa arbitrária no resumo é rejeitada. Permissões existentes de tarifas continuam cobertas pelo teste integrado.
+- Quatro fluxos de navegador aprovados, incluindo acesso em `/empresa`, resumo de taxas e repasses, exportação CSV, consulta de tarifas sem edição, cadastro da loja e abertura de chamada pelo portal.
+- Datas de abertura, conclusão e quitação têm rótulos separados. Saldo atual inclui todo o histórico; não se confunde com o filtro de período.

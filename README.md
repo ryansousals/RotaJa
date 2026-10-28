@@ -80,3 +80,17 @@ Referências: [Vite](https://vite.dev/guide/), [Tailwind](https://tailwindcss.co
 Em **Empresas parceiras → Taxas por bairro**, o administrador escolhe o bairro e salva a taxa de entrega e o adicional de retorno exclusivos da loja. Todos os bairros ativos continuam disponíveis para todas as lojas. Sem personalização, vale a taxa padrão do bairro. Alterar o padrão afeta somente próximas chamadas de lojas sem personalização; alterar uma tarifa da loja não modifica pedidos existentes. Os ganhos do entregador continuam definidos no cadastro do bairro.
 
 Na abertura, somente a loja autenticada pode criar o pedido. **Pago** mostra a taxa, sem campo de valor. **A receber** solicita forma de pagamento e o total a recolher, incluindo a taxa; a taxa aparece separada para conferência. Exemplo: total R$ 100 e taxa R$ 7 resultam em cobrança de R$ 100 e produto calculado de R$ 93. A forma prevista é confirmada pelo entregador na conclusão.
+
+## Portal das empresas
+
+Acesse **http://localhost:3002/empresa**. A administração cria a loja e seu acesso em **Empresas parceiras → Cadastrar empresa**, informando e-mail e senha inicial. A empresa entra com essas credenciais e é encaminhada ao seu resumo. Não há auto-cadastro público.
+
+O portal reúne:
+- Resumo de chamadas abertas no período, chamadas ativas e total histórico.
+- Taxas das entregas concluídas no período, recebimentos em dinheiro e pagamentos diretos à loja.
+- Saldo atual a receber da administração (ou a pagar), incluindo corridas ainda sem fechamento e fechamentos pendentes, sem duplicar valores.
+- Repasses recebidos pela data de quitação, histórico de acertos e referências de comprovantes em Financeiro.
+- Nova chamada, acompanhamento e histórico das entregas, exportação do resumo em CSV.
+- Consulta das tarifas da própria loja e dos dados cadastrais. Somente o administrador altera taxas, inclusive pela API.
+
+O período é interpretado em America/Fortaleza. Chamadas são contadas por abertura; gastos de frete por conclusão; repasses recebidos por quitação. O saldo atual considera todo o histórico e não muda ao filtrar o período. PIX/cartão direto à loja não entram como dinheiro a repassar. Acertos negativos representam dívida da loja com a central. A quitação registra conferência e não realiza transferência bancária.

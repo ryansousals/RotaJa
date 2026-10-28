@@ -42,7 +42,7 @@ test('operação, cliente e entregador completam um pedido real pelo frontend', 
   const clienteContexto = await browser.newContext(); const cliente = await clienteContexto.newPage();
   const motoContexto = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' }); const moto = await motoContexto.newPage();
   try {
-    await login(cliente, lojaEmail, senha); await cliente.reload(); await expect(cliente.getByRole('heading', { name: 'Minhas chamadas' })).toBeVisible();
+    await login(cliente, lojaEmail, senha); await cliente.reload(); await expect(cliente.getByRole('heading', { name: 'Resumo da minha loja' })).toBeVisible(); await cliente.getByRole('link', { name: 'Minhas chamadas', exact: true }).click();
     await expect(cliente.getByRole('link', { name: 'Empresas parceiras' })).toHaveCount(0);
     const acesso = await cliente.request.get('/api/usuarios'); expect(acesso.status()).toBe(403);
     await cliente.getByRole('button', { name: 'Nova chamada' }).click();
@@ -121,3 +121,29 @@ test('caixa e repasse são gerados e conferidos pelas telas financeiras', async 
   } finally { await adminContexto.close(); }
 });
 
+
+ test('portal da empresa mostra indicadores, tarifas protegidas e cadastro no celular', async ({ page }) => {
+  await page.goto('/empresa');
+  await expect(page.getByRole('heading', { name: 'Acesso da empresa' })).toBeVisible();
+  await page.getByLabel('E-mail', { exact: true }).fill(lojaEmail); await page.getByLabel('Senha', { exact: true }).fill(senha);
+  await page.getByRole('button', { name: 'Entrar na plataforma' }).click();
+  await expect(page.getByRole('heading', { name: 'Resumo da minha loja' })).toBeVisible();
+  await expect(page.getByTestId('a-receber')).toHaveText('R$ 0,00');
+  await expect(page.locator('.metrica').filter({ hasText: 'Gasto com taxas' })).toContainText('R$ 9,00');
+  await expect(page.locator('.metrica').filter({ hasText: 'Repasses recebidos' })).toContainText('R$ 91,00');
+  await page.screenshot({ path: 'test-results/portal-empresa.png', fullPage: true });
+  const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Baixar resumo' }).click();
+  expect((await download).suggestedFilename()).toContain('resumo-empresa');
+  await page.getByRole('link', { name: 'Minhas tarifas', exact: true }).click();
+  await page.getByLabel('Buscar bairro').fill('Bairro Web '+sufixo);
+  await expect(page.getByRole('row').filter({ hasText: 'Bairro Web '+sufixo })).toContainText('R$ 9,00');
+  await expect(page.getByRole('button', { name: /Salvar|Editar/ })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Minha empresa', exact: true }).click(); await expect(page.getByText(lojaEmail, { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Resumo da loja', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => { const b = await page.locator('.sidebar').boundingBox(); return b ? b.x + b.width : 1; }).toBeLessThanOrEqual(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'test-results/portal-empresa-mobile.png', fullPage: true });
+  await page.getByRole('link', { name: 'Nova chamada', exact: true }).click(); await expect(page.getByRole('dialog')).toBeVisible();
+ });
