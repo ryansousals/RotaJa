@@ -8,7 +8,7 @@ const ator = (r: Response) => r.locals.ator as Ator;
 const exigir = (r: Response) => { if (!operador(ator(r).tp_usr)) throw new Falha(403, 'Acesso restrito à operação'); };
 const id = z.string().uuid();
 const moeda = z.string().regex(/^\d{1,9}(\.\d{1,2})?$/);
-const usuario = z.object({ nom_usr: z.string().trim().min(3).max(150), eml_usr: z.string().email().transform(v => v.toLowerCase()), senha: z.string().min(16).max(100) });
+const usuario = z.object({ nom_usr: z.string().trim().min(3).max(150), eml_usr: z.string().trim().email().transform(v => v.toLowerCase()), senha: z.string().min(16).max(100) });
 export function registrarPainel(app: Express, redis: Redis) {
   app.get('/empresas/:id/tarifas', async (req, res) => {
     exigir(res); const id_emp = id.parse(req.params.id);

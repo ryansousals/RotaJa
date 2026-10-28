@@ -91,6 +91,7 @@ model emp_empresas {
   usuario  usr_usuarios         @relation(fields: [id_usr], references: [id_usr])
   pedidos  ped_pedidos[]
   repasses rep_repasses_lojas[]
+  dt_exc   DateTime? @banco.Timestamptz(3)
   tarifas  tx_taxas_empresas[]
 }
 
@@ -230,4 +231,12 @@ model log_historico_pedidos {
   usuario   usr_usuarios @relation(fields: [id_usr], references: [id_usr])
 
   @@index([id_ped, dt_cad])
+}
+
+model cfg_sistema {
+  id_cfg Int @id @default(1)
+  st_emp_lig Boolean @default(true)
+  versao Int @default(0)
+  dt_alt DateTime @updatedAt @banco.Timestamptz(3)
+  id_usr_alt String? @banco.Uuid
 }

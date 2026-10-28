@@ -13,6 +13,7 @@ import { Prisma } from '@prisma/client';
 import { z, ZodError } from 'zod';
 import { Falha, operador } from './dominio.js';
 import { banco, criarPedido, despachar, mudarStatus, fecharCaixa, transacao, type Ator } from './servicos.js';
+import { registrarControle, validarAcessoEmpresa } from './controle.js';
 import { registrarPortal } from './portal.js';
 import { registrarPainel } from './painel.js';
 const app = express(), http = createServer(app);
@@ -38,15 +39,18 @@ async function autenticar(token?: string): Promise<Ator> {
   if (!id) throw new Falha(401, 'Sessão expirada');
   const u = await banco.usr_usuarios.findUnique({ where: { id_usr: id } });
   if (!u?.st_atv) throw new Falha(401, 'Usuário inativo');
+  await validarAcessoEmpresa(u);
   return { id_usr: u.id_usr, tp_usr: u.tp_usr };
 }
 const ator = (r: Response) => r.locals.ator as Ator;
 const exigirOperador = (a: Ator) => { if (!operador(a.tp_usr)) throw new Falha(403, 'Acesso restrito à operação'); };
 app.get('/saude', async (_req, res) => { await banco.$queryRaw`SELECT 1`; await redis.ping(); res.json({ st: 'disponivel' }); });
 app.post('/autenticacao/entrar', rateLimit({ windowMs: 900_000, limit: 20 }), async (req, res) => {
-  const d = z.object({ eml_usr: z.string().email(), senha: z.string().max(200) }).parse(req.body);
+  const d = z.object({ eml_usr: z.string().trim().email(), senha: z.string().max(200), area: z.enum(['ADM','EMPRESA','ENTREGADOR']).optional() }).parse(req.body);
   const u = await banco.usr_usuarios.findUnique({ where: { eml_usr: d.eml_usr.toLowerCase() } });
   if (!u?.st_atv || !await compare(d.senha, u.sen_hash)) throw new Falha(401, 'Credenciais inválidas');
+  if (d.area && !(d.area === 'ADM' ? operador(u.tp_usr) : d.area === 'EMPRESA' ? u.tp_usr === 'REMETENTE' : u.tp_usr === 'ENTREGADOR')) throw new Falha(403, 'Este usuário não pertence ao acesso selecionado. Escolha a opção correta.');
+  await validarAcessoEmpresa(u);
   const token = randomBytes(32).toString('hex');
   await redis.set(chaveSessao(token), u.id_usr, 'EX', 3600);
   res.cookie('rotaja_sessao', token, { ...cookieOpcoes, maxAge: 3600_000 });
@@ -64,6 +68,7 @@ app.post('/autenticacao/sair', async (req, res) => {
 });
 registrarPainel(app, redis);
 registrarPortal(app);
+registrarControle(app, io);
 app.post('/usuarios', async (req, res) => {
   exigirOperador(ator(res));
   const d = z.object({ nom_usr: z.string().min(3).max(150), eml_usr: z.string().email(), senha: z.string().min(16).max(100), tp_usr: z.enum(['OPERADOR','REMETENTE','ENTREGADOR']) }).parse(req.body);
@@ -79,8 +84,8 @@ app.post('/empresas', async (req, res) => {
   if (u?.tp_usr !== 'REMETENTE') throw new Falha(422, 'Selecione um usuário remetente');
   res.status(201).json(await banco.emp_empresas.create({ data: d }));
 });
-app.get('/empresas', async (_req, res) => { exigirOperador(ator(res)); res.json(await banco.emp_empresas.findMany({ take: 100, orderBy: { nom_fan: 'asc' } })); });
-app.patch('/empresas/:id', async (req, res) => { exigirOperador(ator(res)); const dados = empresaSchema.omit({ id_usr: true }).partial().extend({ st_atv: z.boolean().optional() }).parse(req.body); res.json(await banco.emp_empresas.update({ where: { id_emp: z.string().uuid().parse(req.params.id) }, data: dados })); });
+app.get('/empresas', async (_req, res) => { exigirOperador(ator(res)); res.json(await banco.emp_empresas.findMany({ where: { dt_exc: null }, take: 100, orderBy: { nom_fan: 'asc' } })); });
+app.patch('/empresas/:id', async (req, res) => { exigirOperador(ator(res)); const dados = empresaSchema.omit({ id_usr: true }).partial().extend({ st_atv: z.boolean().optional() }).parse(req.body); res.json(await banco.emp_empresas.update({ where: { id_emp: z.string().uuid().parse(req.params.id), dt_exc: null }, data: dados })); });
 app.post('/entregadores', async (req, res) => {
   exigirOperador(ator(res)); const d = z.object({ id_usr: z.string().uuid(), doc_cpf: z.string().regex(/^\d{11}$/), pla_moto: z.string().min(7).max(8), tel_ent: z.string().regex(/^\+?\d{10,15}$/) }).parse(req.body);
   const u = await banco.usr_usuarios.findUnique({ where: { id_usr: d.id_usr } });
@@ -196,7 +201,7 @@ io.use(async (socket, next) => { try {
 io.on('connection', socket => {
   const a = socket.data.ator as Ator;
   socket.join(`sessao:${chaveSessao(socket.data.token)}`);
-  socket.join(`usr:${a.id_usr}`); if (operador(a.tp_usr)) socket.join('operacao');
+  socket.join(`usr:${a.id_usr}`); if (a.tp_usr === 'REMETENTE') socket.join('empresas'); if (operador(a.tp_usr)) socket.join('operacao');
   const expirar = setTimeout(() => socket.disconnect(true), 3600_000); socket.on('disconnect', () => clearTimeout(expirar));
   socket.on('pedido:despachar', async (dados, ack) => {
     if (typeof ack !== 'function') return;
@@ -226,7 +231,9 @@ app.use((erro: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (erro instanceof Falha) { res.status(erro.codigo).json({ erro: erro.message }); return; }
   if (erro instanceof Prisma.PrismaClientKnownRequestError) {
     const codigo = erro.code === 'P2025' ? 404 : ['P2002','P2034'].includes(erro.code) ? 409 : 422;
-    res.status(codigo).json({ erro: 'Registro ausente, duplicado ou conflito; atualize e tente novamente' }); return;
+    const alvo = String(erro.meta?.target ?? '');
+    const duplicado = alvo.includes('eml_usr') ? 'Este e-mail já está cadastrado. Use outro e-mail ou consulte o usuário existente.' : alvo.includes('doc_emp') ? 'Este CPF/CNPJ já pertence a uma empresa cadastrada, inclusive se excluída. Consulte o cadastro existente.' : alvo.includes('id_usr') ? 'Este usuário já está vinculado a um cadastro.' : 'Já existe um cadastro com estes dados. Confira os campos e tente novamente.';
+    res.status(codigo).json({ erro: erro.code === 'P2002' ? duplicado : erro.code === 'P2025' ? 'Cadastro não encontrado ou já excluído. Atualize a lista.' : erro.code === 'P2034' ? 'Outra alteração ocorreu ao mesmo tempo. Tente novamente.' : 'Não foi possível salvar: confira os dados e vínculos do cadastro.' }); return;
   }
   console.error('Falha interna na requisição'); res.status(500).json({ erro: 'Erro interno' });
 });

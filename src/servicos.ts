@@ -35,9 +35,11 @@ export async function criarPedido(ator: Ator, entrada: unknown, idAutor = ator.i
       if (existente.resumo_req !== resumo) throw new Falha(409, 'Chave de idempotência reutilizada com outros dados');
       return existente;
     }
+    const cfg = await tx.cfg_sistema.findUnique({ where: { id_cfg: 1 } });
+    if (cfg && !cfg.st_emp_lig) throw new Falha(423, 'O sistema das empresas está desligado pela administração');
     const empresa = await tx.emp_empresas.findUnique({ where: { id_usr: ator.id_usr } });
     const bairro = await tx.bai_bairros.findUnique({ where: { id_bai: dados.id_bai } });
-    if (!empresa?.st_atv) throw new Falha(403, 'Empresa inativa ou ausente');
+    if (!empresa?.st_atv || empresa.dt_exc) throw new Falha(403, 'Empresa inativa ou ausente');
     if (!bairro?.st_atv) throw new Falha(422, 'Selecione um bairro permitido e ativo');
     const tarifa = await tx.tx_taxas_empresas.findUnique({ where: { id_emp_id_bai: { id_emp: empresa.id_emp, id_bai: bairro.id_bai } } }) ?? bairro;
     const taxa = tarifa.vlr_tx_ent.plus(dados.st_ret ? tarifa.vlr_tx_ret : 0);
