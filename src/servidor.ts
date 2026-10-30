@@ -1,3 +1,5 @@
+import { registrarRelatorios } from './relatorios.js';
+import { registrarCaixaDiario } from './caixa-diario.js';
 import 'dotenv/config';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { createServer } from 'node:http';
@@ -56,17 +58,23 @@ app.post('/autenticacao/entrar', rateLimit({ windowMs: 900_000, limit: 20 }), as
   res.cookie('rotaja_sessao', token, { ...cookieOpcoes, maxAge: 3600_000 });
   res.json({ token, expira_em: 3600, usuario: { id_usr: u.id_usr, nom_usr: u.nom_usr, tp_usr: u.tp_usr } });
 });
+// Logout idempotente também limpa cookies de sessões expiradas ou bloqueadas.
+app.post('/autenticacao/sair', async (req, res) => {
+  if (req.headers.origin && !origens.includes(req.headers.origin)) throw new Falha(403, 'Origem não permitida');
+  const token = tokenRequisicao(req);
+  if (token && token.length <= 256) {
+    await redis.del(chaveSessao(token));
+    io.in(`sessao:${chaveSessao(token)}`).disconnectSockets(true);
+  }
+  res.clearCookie('rotaja_sessao', cookieOpcoes).sendStatus(204);
+});
 app.use(async (req, res, next) => { try {
   if (!['GET','HEAD','OPTIONS'].includes(req.method) && req.headers.origin && !origens.includes(req.headers.origin)) throw new Falha(403, 'Origem não permitida');
   res.locals.ator = await autenticar(tokenRequisicao(req)); next();
 } catch (e) { next(e); } });
-app.post('/autenticacao/sair', async (req, res) => {
-  const token = tokenRequisicao(req)!;
-  await redis.del(chaveSessao(token));
-  io.in(`sessao:${chaveSessao(token)}`).disconnectSockets(true);
-  res.clearCookie('rotaja_sessao', cookieOpcoes).sendStatus(204);
-});
 registrarPainel(app, redis);
+registrarRelatorios(app);
+registrarCaixaDiario(app);
 registrarPortal(app);
 registrarControle(app, io);
 app.post('/usuarios', async (req, res) => {

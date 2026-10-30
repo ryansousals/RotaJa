@@ -81,3 +81,15 @@ Frontend: `/empresa` abre o acesso de parceiros; o perfil REMETENTE inicia em `#
 - Na abertura de pedido, o estado geral é novamente verificado dentro da transação. Listagem de empresas exclui `dt_exc != null`; edição comum não alcança excluídas.
 
 Validação específica: `npx tsx scripts/verificar-controle.ts`. Executar apenas em ambiente de teste/local: cria uma empresa fictícia, pausa o acesso geral brevemente e restaura o estado anterior em `finally`. A empresa fictícia é excluída logicamente ao finalizar. Testes web de controle também restauram o estado anterior.
+
+## Novos contratos: relatórios e caixa diário
+
+- `GET /relatorios?tipo=chamadas|entregadores|empresas&inicio=<ISO>&fim=<ISO>`: filtros opcionais `id_emp`, `id_ent`, `status`, `busca`, `repasse=TODOS|FAZER|NAO_FAZER`. Até 366 dias e 10 mil registros; recusa excedentes. Empresa sempre limitada ao seu usuário; entregador, à própria atribuição. Colunas e linhas completas para CSV/PDF, resumo e notas sobre as regras.
+- `GET /caixa-diario?inicio=<ISO>&fim=<ISO>`: aberturas em andamento e até 500 fechamentos no intervalo; recusa excedentes. Entregadores veem só o próprio caixa; empresas não têm acesso.
+- `POST /caixa-diario/abrir`: `id_ent`, `dt_ab` ISO, `vlr_ab` decimal em string, `obs_ab` opcional. Uma abertura por entregador, sem retroceder sobre fechamento existente.
+- `GET /caixa-diario/:id/previa`: fotografia consistente dos valores por forma, ganhos e fim exclusivo.
+- `POST /caixa-diario/:id/fechar`: `dt_fim`, `informado: {dinheiro,cartao,pix,online}`, `parcial`, `outros`, `pos_meia_noite`, `observacoes`. Decimais em string, não negativos exceto ajustes. Recalcula no servidor e captura autor. Retentativa do mesmo fechamento retorna o caixa existente, sem duplicá-lo. Fechamento tradicional recusa períodos com abertura em andamento.
+- `POST /caixas/:id/quitar` continua exclusivo à operação, com comprovante. Não realiza transferência de dinheiro.
+- `ONLINE_LOJA` representa recebimento direto pela empresa e foi incluído nas opções de criação/conclusão de chamadas.
+
+A migração é aditiva e mantém dados anteriores. O índice SQL parcial `uma_abertura_por_entregador` deve ser preservado; não usar `db push` no lugar das migrações.

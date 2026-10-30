@@ -11,7 +11,7 @@ export const novoPedido = z.object({
   tel_dest: z.string().regex(/^\+?[0-9]{10,15}$/), log_dest: texto, num_dest: texto,
   cmp_dest: texto.optional(), ref_dest: texto.optional(), tp_end: z.enum(['ENTREGA','ORIGEM']),
   st_ret: z.boolean(), st_pag: z.enum(['PAGO','A_RECEBER']), vlr_cobrar: dinheiro.optional(),
-  tp_pag_prev: z.enum(['DINHEIRO','PIX_LOJA','CARTAO_LOJA']).optional(),
+  tp_pag_prev: z.enum(['DINHEIRO','PIX_LOJA','CARTAO_LOJA','ONLINE_LOJA']).optional(),
 }).strict().superRefine((d, ctx) => {
   if (d.st_pag === 'A_RECEBER' && (!d.vlr_cobrar || !d.tp_pag_prev)) ctx.addIssue({ code: 'custom', message: 'Informe o total a recolher e a forma de pagamento' });
   if (d.st_pag === 'PAGO' && (d.vlr_cobrar !== undefined || d.tp_pag_prev !== undefined)) ctx.addIssue({ code: 'custom', message: 'Chamado pago não recebe valor nem forma de cobrança' });
@@ -73,7 +73,7 @@ export async function despachar(ator: Ator, entrada: unknown) {
   });
 }
 export async function mudarStatus(ator: Ator, entrada: unknown) {
-  const d = z.object({ id_ped: z.string().uuid(), versao: z.number().int().nonnegative(), st_ped: z.nativeEnum(st_pedido), tp_rec: z.enum(['DINHEIRO','PIX_LOJA','CARTAO_LOJA']).optional() }).parse(entrada);
+  const d = z.object({ id_ped: z.string().uuid(), versao: z.number().int().nonnegative(), st_ped: z.nativeEnum(st_pedido), tp_rec: z.enum(['DINHEIRO','PIX_LOJA','CARTAO_LOJA','ONLINE_LOJA']).optional() }).parse(entrada);
   return transacao(async tx => {
     const p = await tx.ped_pedidos.findUniqueOrThrow({ where: { id_ped: d.id_ped }, include: { entregador: true } });
     if (!operador(ator.tp_usr) && (ator.tp_usr !== 'ENTREGADOR' || p.entregador?.id_usr !== ator.id_usr)) throw new Falha(403, 'Pedido não atribuído ao usuário');
@@ -100,6 +100,7 @@ export async function fecharCaixa(ator: Ator, entrada: unknown) {
   return transacao(async tx => {
     const ent = await tx.ent_entregadores.findUniqueOrThrow({ where: { id_ent: d.id_ent } });
     if (!operador(ator.tp_usr) && ent.id_usr !== ator.id_usr) throw new Falha(403, 'Caixa de outro entregador');
+    if (await tx.ab_aberturas_caixa.findFirst({where:{id_ent:d.id_ent,id_cx:null,dt_ab:{lt:fim}}})) throw new Falha(409,'Use Caixa diário para fechar a abertura em andamento');
     const existente = await tx.cx_caixa_entregador.findUnique({ where: { id_ent_dt_ini_dt_fim: { id_ent: d.id_ent, dt_ini: inicio, dt_fim: fim } } });
     if (existente) return existente;
     const pedidos = await tx.ped_pedidos.findMany({ where: { id_ent: d.id_ent, st_ped: 'CONCLUIDO', dt_conc: { gte: inicio, lt: fim } } });

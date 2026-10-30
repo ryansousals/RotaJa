@@ -51,6 +51,7 @@ enum tp_recebimento {
   DINHEIRO
   PIX_LOJA
   CARTAO_LOJA
+  ONLINE_LOJA
 }
 
 enum st_repasse {
@@ -71,6 +72,7 @@ model usr_usuarios {
   pedidos          ped_pedidos[]
   historicos       log_historico_pedidos[]
   caixas_validados cx_caixa_entregador[]
+  aberturas_caixa ab_aberturas_caixa[]
 }
 
 model emp_empresas {
@@ -105,6 +107,7 @@ model ent_entregadores {
   usuario  usr_usuarios          @relation(fields: [id_usr], references: [id_usr])
   pedidos  ped_pedidos[]
   caixas   cx_caixa_entregador[]
+  aberturas ab_aberturas_caixa[]
 }
 
 model bai_bairros {
@@ -200,6 +203,8 @@ model cx_caixa_entregador {
   entregador        ent_entregadores @relation(fields: [id_ent], references: [id_ent])
   validador         usr_usuarios?    @relation(fields: [id_usr_val], references: [id_usr])
   pedidos           ped_pedidos[]
+  abertura          ab_aberturas_caixa?
+  conferencia       Json?
 
   @@unique([id_ent, dt_ini, dt_fim])
 }
@@ -239,4 +244,18 @@ model cfg_sistema {
   versao Int @default(0)
   dt_alt DateTime @updatedAt @banco.Timestamptz(3)
   id_usr_alt String? @banco.Uuid
+}
+
+model ab_aberturas_caixa {
+  id_ab String @id @default(uuid()) @banco.Uuid
+  id_ent String @banco.Uuid
+  dt_ab DateTime @banco.Timestamptz(3)
+  vlr_ab Decimal @banco.Decimal(12, 2)
+  obs_ab String
+  id_usr String @banco.Uuid
+  id_cx String? @unique @banco.Uuid
+  entregador ent_entregadores @relation(fields: [id_ent], references: [id_ent])
+  caixa cx_caixa_entregador? @relation(fields: [id_cx], references: [id_cx])
+  autor usr_usuarios @relation(fields: [id_usr], references: [id_usr])
+  @@index([id_ent, dt_ab])
 }
