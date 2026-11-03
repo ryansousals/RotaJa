@@ -172,7 +172,7 @@ test('administrador confirma pausa geral e exclusão preservando o histórico', 
   }
   await page.getByRole('link',{name:'Empresas parceiras',exact:true}).click();
   await page.getByRole('button',{name:'Excluir empresa Loja Web '+sufixo,exact:true}).click();
-  await expect(page.getByText(/histórico financeiro serão preservados/)).toBeVisible();
+  await expect(page.getByText(/histórico preservado/)).toBeVisible();
   await page.getByRole('button',{name:'Confirmar exclusão',exact:true}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('row').filter({hasText:'Loja Web '+sufixo})).toHaveCount(0);
