@@ -108,7 +108,7 @@ app.get('/entregadores', async (req, res) => { exigirOperador(ator(res)); res.js
 app.get('/bairros', async (_req, res) => {
   const a = ator(res);
   const emp = a.tp_usr === 'REMETENTE' ? await banco.emp_empresas.findUnique({ where: { id_usr: a.id_usr } }) : null;
-  const bairros = await banco.bai_bairros.findMany({ where: operador(a.tp_usr) ? {} : { st_atv: true }, orderBy: { nom_bai: 'asc' }, include: { tarifas: { where: { id_emp: emp?.id_emp ?? '00000000-0000-0000-0000-000000000000' } } } });
+  const bairros = await banco.bai_bairros.findMany({ where: { dt_exc: null, ...(operador(a.tp_usr) ? {} : { st_atv: true }) }, orderBy: { nom_bai: 'asc' }, include: { tarifas: { where: { id_emp: emp?.id_emp ?? '00000000-0000-0000-0000-000000000000' } } } });
   res.json(bairros.map(({ tarifas, ...b }) => ({ ...b, ...(tarifas[0] ? { vlr_tx_ent: tarifas[0].vlr_tx_ent, vlr_tx_ret: tarifas[0].vlr_tx_ret } : {}) })));
 });
 app.post('/bairros', async (req, res) => {
@@ -154,7 +154,7 @@ app.patch('/pedidos/:id', async (req, res) => {
     const id_ped = z.string().uuid().parse(req.params.id);
     const antes = await tx.ped_pedidos.findUniqueOrThrow({ where: { id_ped } });
     if (antes.id_cx || antes.id_rep || ['CONCLUIDO','CANCELADO'].includes(antes.st_ped)) throw new Falha(409, 'Pedido encerrado exige lançamento de ajuste financeiro; não reescreva o histórico');
-    if (d.id_bai && !await tx.bai_bairros.findFirst({ where: { id_bai: d.id_bai, st_atv: true } })) throw new Falha(422, 'Bairro não permitido');
+    if (d.id_bai && !await tx.bai_bairros.findFirst({ where: { id_bai: d.id_bai, st_atv: true, dt_exc: null } })) throw new Falha(422, 'Bairro não permitido');
     const { versao, motivo, ...campos } = d;
     if (antes.st_pag === 'PAGO' && d.vlr_cobrar !== undefined) throw new Falha(422, 'Pedido pago não recebe cobrança');
     const vlr_cobrar = new Prisma.Decimal(d.vlr_cobrar ?? antes.vlr_cobrar);

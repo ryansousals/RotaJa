@@ -114,6 +114,7 @@ model ent_entregadores {
 }
 
 model bai_bairros {
+  dt_exc        DateTime?     @banco.Timestamptz(3)
   id_bai        String        @id @default(uuid()) @banco.Uuid
   nom_bai       String        @banco.VarChar(120)
   cid_bai       String        @banco.VarChar(120)

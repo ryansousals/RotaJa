@@ -13,13 +13,14 @@ export function registrarPainel(app: Express, redis: Redis) {
   app.get('/empresas/:id/tarifas', async (req, res) => {
     exigir(res); const id_emp = id.parse(req.params.id);
     await banco.emp_empresas.findUniqueOrThrow({ where: { id_emp } });
-    const bairros = await banco.bai_bairros.findMany({ orderBy: { nom_bai: 'asc' }, include: { tarifas: { where: { id_emp } } } });
+    const bairros = await banco.bai_bairros.findMany({ where: { dt_exc: null }, orderBy: { nom_bai: 'asc' }, include: { tarifas: { where: { id_emp } } } });
     res.json(bairros.map(({ tarifas, ...b }) => ({ ...b, personalizada: !!tarifas[0], ...(tarifas[0] ? { vlr_tx_ent: tarifas[0].vlr_tx_ent, vlr_tx_ret: tarifas[0].vlr_tx_ret } : {}) })));
   });
   app.put('/empresas/:id/tarifas/:bairro', async (req, res) => {
     if (ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente o administrador define tarifas');
     const id_emp = id.parse(req.params.id), id_bai = id.parse(req.params.bairro);
     const dados = z.object({ vlr_tx_ent: moeda, vlr_tx_ret: moeda }).strict().parse(req.body);
+    await banco.bai_bairros.findUniqueOrThrow({where:{id_bai,dt_exc:null}});
     res.json(await banco.tx_taxas_empresas.upsert({ where: { id_emp_id_bai: { id_emp, id_bai } }, create: { id_emp, id_bai, ...dados }, update: dados }));
   });
   app.get('/autenticacao/eu', async (_req, res) => {
@@ -38,7 +39,16 @@ export function registrarPainel(app: Express, redis: Redis) {
     res.status(201).json(await transacao(async tx => { const u = await tx.usr_usuarios.create({ data: { nom_usr, eml_usr, sen_hash, tp_usr: 'ENTREGADOR' } }); return tx.ent_entregadores.create({ data: { ...entregador, id_usr: u.id_usr } }); }));
   });
   app.patch('/entregadores/:id', async (req, res) => { exigir(res); res.json(await banco.ent_entregadores.update({ where: { id_ent: id.parse(req.params.id), dt_exc: null }, data: z.object({ st_atv: z.boolean(), pla_moto: z.string().min(7).max(8).optional(), tel_ent: z.string().regex(/^\+?\d{10,15}$/).optional() }).parse(req.body) })); });
-  app.patch('/bairros/:id', async (req, res) => { if (ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente o administrador altera bairros e tarifas'); res.json(await banco.bai_bairros.update({ where: { id_bai: id.parse(req.params.id) }, data: z.object({ nom_bai: z.string().min(2).optional(), vlr_tx_ent: moeda.optional(), vlr_ganho_ent: moeda.optional(), vlr_tx_ret: moeda.optional(), vlr_ganho_ret: moeda.optional(), st_atv: z.boolean().optional() }).strict().parse(req.body) })); });
+  app.delete('/bairros/:id', async (req,res) => {
+    if (ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403,'Somente o administrador pode excluir bairros');
+    const id_bai=id.parse(req.params.id);
+    await transacao(async tx=>{
+      const bairro=await tx.bai_bairros.findUniqueOrThrow({where:{id_bai}});
+      if (!bairro.dt_exc) await tx.bai_bairros.update({where:{id_bai},data:{st_atv:false,dt_exc:new Date()}});
+    });
+    res.sendStatus(204);
+  });
+  app.patch('/bairros/:id', async (req, res) => { if (ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente o administrador altera bairros e tarifas'); res.json(await banco.bai_bairros.update({ where: { id_bai: id.parse(req.params.id), dt_exc: null }, data: z.object({ nom_bai: z.string().min(2).optional(), vlr_tx_ent: moeda.optional(), vlr_ganho_ent: moeda.optional(), vlr_tx_ret: moeda.optional(), vlr_ganho_ret: moeda.optional(), st_atv: z.boolean().optional() }).strict().parse(req.body) })); });
   app.get('/painel', async (_req, res) => {
     const a = ator(res); const escopo = operador(a.tp_usr) ? {} : a.tp_usr === 'REMETENTE' ? { id_usr: a.id_usr } : { entregador: { id_usr: a.id_usr } };
     const grupos = await banco.ped_pedidos.groupBy({ by: ['st_ped'], where: escopo, _count: true });
