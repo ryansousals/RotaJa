@@ -93,3 +93,9 @@ Validação específica: `npx tsx scripts/verificar-controle.ts`. Executar apena
 - `ONLINE_LOJA` representa recebimento direto pela empresa e foi incluído nas opções de criação/conclusão de chamadas.
 
 A migração é aditiva e mantém dados anteriores. O índice SQL parcial `uma_abertura_por_entregador` deve ser preservado; não usar `db push` no lugar das migrações.
+
+## Registro de caixa por dia
+- `GET /caixa-registro?dia=AAAA-MM-DD&id_ent=<uuid>`: aberturas, pendentes com disponibilidade, fechamentos do dia, movimentos e consolidado. O entregador recebe só seus próprios registros, sem consolidado global.
+- `POST /caixa-registro/movimentos`: operação; `id_ab`, `chave_idem` UUID, `tp_mov` (`TROCO_ENTRADA`, `TROCO_SAIDA`, `PARCIAL`), `valores` (dinheiro/pix/cartao/online em strings decimais), `obs_mov`. Trocos somente em dinheiro. Saldo e imutabilidade validados em transação serializável.
+- `POST /caixa-registro/geral/fechar`: operação; `dia`, `observacoes`. Dia terminado, sem aberturas ou acertos pendentes. Arquivo único por data; filtro de entregador não restringe o encerramento.
+- A prévia de caixa agora inclui troco líquido e parciais acumulados. O fechamento rejeita parcial divergente e lançamentos posteriores à prévia; atualize antes de tentar novamente. Corridas em andamento impedem fechamento definitivo.

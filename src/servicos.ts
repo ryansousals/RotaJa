@@ -1,3 +1,4 @@
+import { exigirDiaAberto } from './movimentos-caixa.js';
 import { createHash } from 'node:crypto';
 import { Prisma, PrismaClient, st_pedido } from '@prisma/client';
 import { z } from 'zod';
@@ -103,6 +104,7 @@ export async function fecharCaixa(ator: Ator, entrada: unknown) {
     if (await tx.ab_aberturas_caixa.findFirst({where:{id_ent:d.id_ent,id_cx:null,dt_ab:{lt:fim}}})) throw new Falha(409,'Use Caixa diário para fechar a abertura em andamento');
     const existente = await tx.cx_caixa_entregador.findUnique({ where: { id_ent_dt_ini_dt_fim: { id_ent: d.id_ent, dt_ini: inicio, dt_fim: fim } } });
     if (existente) return existente;
+    await exigirDiaAberto(tx,new Date(+fim-1));
     const pedidos = await tx.ped_pedidos.findMany({ where: { id_ent: d.id_ent, st_ped: 'CONCLUIDO', dt_conc: { gte: inicio, lt: fim } } });
     if (pedidos.some(p => p.id_cx)) throw new Falha(409, 'Período sobrepõe caixa existente');
     const caixa = await tx.cx_caixa_entregador.create({ data: { id_ent: d.id_ent, dt_ini: inicio, dt_fim: fim, dt_ref: inicio, ...calcularCaixa(pedidos), st_cx: 'AGUARDANDO_VALIDACAO' } });

@@ -73,6 +73,8 @@ model usr_usuarios {
   historicos       log_historico_pedidos[]
   caixas_validados cx_caixa_entregador[]
   aberturas_caixa ab_aberturas_caixa[]
+  movimentos_caixa mov_movimentos_caixa[]
+  fechamentos_gerais ger_fechamentos_caixa[]
 }
 
 model emp_empresas {
@@ -205,6 +207,9 @@ model cx_caixa_entregador {
   pedidos           ped_pedidos[]
   abertura          ab_aberturas_caixa?
   conferencia       Json?
+  vlr_fundo_cx Decimal @default(0) @banco.Decimal(12, 2)
+  vlr_troco_cx Decimal @default(0) @banco.Decimal(12, 2)
+  vlr_parcial_din Decimal @default(0) @banco.Decimal(12, 2)
 
   @@unique([id_ent, dt_ini, dt_fim])
 }
@@ -257,5 +262,34 @@ model ab_aberturas_caixa {
   entregador ent_entregadores @relation(fields: [id_ent], references: [id_ent])
   caixa cx_caixa_entregador? @relation(fields: [id_cx], references: [id_cx])
   autor usr_usuarios @relation(fields: [id_usr], references: [id_usr])
+  movimentos mov_movimentos_caixa[]
   @@index([id_ent, dt_ab])
+}
+
+enum tp_movimento_caixa {
+ TROCO_ENTRADA
+ TROCO_SAIDA
+ PARCIAL
+}
+model mov_movimentos_caixa {
+ id_mov String @id @default(uuid()) @banco.Uuid
+ id_ab String @banco.Uuid
+ id_usr String @banco.Uuid
+ chave_idem String @unique @banco.Uuid
+ tp_mov tp_movimento_caixa
+ valores Json
+ obs_mov String
+ dt_mov DateTime @default(now()) @banco.Timestamptz(3)
+ abertura ab_aberturas_caixa @relation(fields:[id_ab],references:[id_ab])
+ autor usr_usuarios @relation(fields:[id_usr],references:[id_usr])
+ @@index([id_ab,dt_mov])
+}
+model ger_fechamentos_caixa {
+ id_ger String @id @default(uuid()) @banco.Uuid
+ dt_ref DateTime @unique @banco.Date
+ dt_fec DateTime @default(now()) @banco.Timestamptz(3)
+ id_usr String @banco.Uuid
+ resumo Json
+ obs_ger String
+ autor usr_usuarios @relation(fields:[id_usr],references:[id_usr])
 }

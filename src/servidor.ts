@@ -1,3 +1,4 @@
+import { registrarCaixaRegistro } from './caixa-registro.js';
 import { registrarRelatorios } from './relatorios.js';
 import { registrarCaixaDiario } from './caixa-diario.js';
 import 'dotenv/config';
@@ -75,6 +76,7 @@ app.use(async (req, res, next) => { try {
 registrarPainel(app, redis);
 registrarRelatorios(app);
 registrarCaixaDiario(app);
+registrarCaixaRegistro(app);
 registrarPortal(app);
 registrarControle(app, io);
 app.post('/usuarios', async (req, res) => {
