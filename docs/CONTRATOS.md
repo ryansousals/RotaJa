@@ -99,3 +99,8 @@ A migração é aditiva e mantém dados anteriores. O índice SQL parcial `uma_a
 - `POST /caixa-registro/movimentos`: operação; `id_ab`, `chave_idem` UUID, `tp_mov` (`TROCO_ENTRADA`, `TROCO_SAIDA`, `PARCIAL`), `valores` (dinheiro/pix/cartao/online em strings decimais), `obs_mov`. Trocos somente em dinheiro. Saldo e imutabilidade validados em transação serializável.
 - `POST /caixa-registro/geral/fechar`: operação; `dia`, `observacoes`. Dia terminado, sem aberturas ou acertos pendentes. Arquivo único por data; filtro de entregador não restringe o encerramento.
 - A prévia de caixa agora inclui troco líquido e parciais acumulados. O fechamento rejeita parcial divergente e lançamentos posteriores à prévia; atualize antes de tentar novamente. Corridas em andamento impedem fechamento definitivo.
+
+## Gestão de usuários
+GET /usuarios?perfil=ADMINISTRADOR|EMPRESAS|ENTREGADORES|CLIENTES&busca=texto&pagina=1 retorna itens, total e paginas (25 por página). Empresas são remetentes vinculados a empresa; clientes são remetentes sem esse vínculo. Cadastros excluídos não são listados. Sem perfil, mantém a lista legada.
+PATCH /usuarios/:id permite nome, e-mail, senha opcional (mínimo 16 caracteres) e st_atv. Não altera perfil. Acessos administrativos só podem ser alterados por administrador. Não permite autodesativação, desativação do último administrador ou reativação de cadastros excluídos. Desativação e mudança de senha revogam sessões Redis e desconectam sockets.
+POST /usuarios permite criar ADMINISTRADOR somente por outro administrador. A interface não oferece perfil Operador. Empresas e entregadores usam os cadastros completos existentes. Clientes sem empresa continuam sujeitos às regras de onboarding e acesso do portal, sem liberação de auto-cadastro.

@@ -66,3 +66,5 @@ A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/
 - Execuções criam registros fictícios identificados como teste; o teste de caixa geral não persiste dados.
 
 03/11/2026 — fluxo simplificado: testes de domínio cobrem a sequência obrigatória e compatibilidade dos estados antigos. verificar-relatorios.ts também verifica PRONTO inicial, lista com caixa aberto, despacho recusado após fechar, exclusão recusada antes do acerto e bloqueio de acesso após excluir. O teste visual de relatórios confirma a modal e a retirada do cadastro da lista.
+
+Tela Usuários: compilação API/web e 10 testes unitários aprovados. Teste de navegador usuarios.spec.ts aprovado: quatro abas, cadastro administrativo e cliente, busca, edição, rejeição de e-mail duplicado e mudança de perfil, autodesativação bloqueada, sessão revogada mesmo após reativar, abertura dos formulários de parceiros e layout móvel.

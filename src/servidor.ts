@@ -1,3 +1,4 @@
+import { registrarUsuarios } from './usuarios.js';
 import { registrarCaixaRegistro } from './caixa-registro.js';
 import { registrarRelatorios } from './relatorios.js';
 import { registrarCaixaDiario } from './caixa-diario.js';
@@ -74,6 +75,7 @@ app.use(async (req, res, next) => { try {
   res.locals.ator = await autenticar(tokenRequisicao(req)); next();
 } catch (e) { next(e); } });
 registrarPainel(app, redis);
+registrarUsuarios(app, redis, io);
 registrarRelatorios(app);
 registrarCaixaDiario(app);
 registrarCaixaRegistro(app);
@@ -81,8 +83,8 @@ registrarPortal(app);
 registrarControle(app, io);
 app.post('/usuarios', async (req, res) => {
   exigirOperador(ator(res));
-  const d = z.object({ nom_usr: z.string().min(3).max(150), eml_usr: z.string().email(), senha: z.string().min(16).max(100), tp_usr: z.enum(['OPERADOR','REMETENTE','ENTREGADOR']) }).parse(req.body);
-  if (d.tp_usr === 'OPERADOR' && ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente administrador cria operadores');
+  const d = z.object({ nom_usr: z.string().min(3).max(150), eml_usr: z.string().email(), senha: z.string().min(16).max(100), tp_usr: z.enum(['ADMINISTRADOR','OPERADOR','REMETENTE','ENTREGADOR']) }).parse(req.body);
+  if (['ADMINISTRADOR','OPERADOR'].includes(d.tp_usr) && ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente administrador cria acessos administrativos');
   const { senha, ...dados } = d;
   res.status(201).json(await banco.usr_usuarios.create({ data: { ...dados, eml_usr: dados.eml_usr.toLowerCase(), sen_hash: await hash(senha, 12) }, select: { id_usr: true, nom_usr: true, tp_usr: true } }));
 });

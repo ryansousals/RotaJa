@@ -25,14 +25,6 @@ export function registrarPainel(app: Express, redis: Redis) {
   app.get('/autenticacao/eu', async (_req, res) => {
     res.json(await banco.usr_usuarios.findUniqueOrThrow({ where: { id_usr: ator(res).id_usr }, select: { id_usr: true, nom_usr: true, eml_usr: true, tp_usr: true, empresa: true, entregador: true } }));
   });
-  app.get('/usuarios', async (_req, res) => { exigir(res); res.json(await banco.usr_usuarios.findMany({ select: { id_usr: true, nom_usr: true, eml_usr: true, tp_usr: true, st_atv: true, dt_cad: true }, orderBy: { nom_usr: 'asc' }, take: 500 })); });
-  app.patch('/usuarios/:id', async (req, res) => {
-    exigir(res); const id_usr = id.parse(req.params.id);
-    const alvo = await banco.usr_usuarios.findUniqueOrThrow({ where: { id_usr } });
-    if (await banco.ent_entregadores.findFirst({where:{id_usr,dt_exc:{not:null}}})) throw new Falha(409,'Cadastro de entregador excluído');
-    if (alvo.tp_usr === 'ADMINISTRADOR' || (alvo.tp_usr === 'OPERADOR' && ator(res).tp_usr !== 'ADMINISTRADOR') || id_usr === ator(res).id_usr) throw new Falha(403, 'Este usuário não pode ser alterado nesta tela');
-    res.json(await banco.usr_usuarios.update({ where: { id_usr }, data: z.object({ st_atv: z.boolean() }).strict().parse(req.body), select: { id_usr: true, st_atv: true } }));
-  });
   app.post('/cadastros/empresa', async (req, res) => {
     exigir(res);
     const d = usuario.extend({ tp_pes: z.enum(['FISICA','JURIDICA']), raz_soc: z.string().min(3), nom_fan: z.string().min(2), doc_emp: z.string().regex(/^(\d{11}|\d{14})$/), log_emp: z.string().min(3), num_emp: z.string().min(1), cmp_emp: z.string().optional(), bai_emp: z.string().min(2), cid_emp: z.string().min(2), uf_emp: z.string().length(2), tel_emp: z.string().regex(/^\+?\d{10,15}$/) }).strict().parse(req.body);

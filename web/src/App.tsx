@@ -1,3 +1,4 @@
+import { Usuarios } from './Usuarios';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { ArrowUpRight, Bike, Building2, ChevronRight, CircleHelp, LayoutDashboard, LogOut, MapPinned, Menu, Package, ShieldCheck, Users, Wallet, X, Zap } from 'lucide-react';
@@ -10,7 +11,7 @@ import { Relatorios } from './Relatorios';
 import { CaixaDiario } from './CaixaRegistro';
 import { Financeiro } from './Financeiro';
 export type Avisar = (mensagem: string, erro?: boolean) => void;
-const nomes: Record<string, string> = { relatorios: 'Relatórios', caixa: 'Caixa diário', resumo: 'Resumo da loja', tarifas: 'Minhas tarifas', conta: 'Minha empresa', 'nova-chamada': 'Nova chamada', entregas: 'Central de entregas', empresas: 'Empresas parceiras', entregadores: 'Entregadores', bairros: 'Bairros e tarifas', usuarios: 'Usuários e acessos', financeiro: 'Financeiro', ajuda: 'Ajuda e operação' };
+const nomes: Record<string, string> = { relatorios: 'Relatórios', caixa: 'Caixa diário', resumo: 'Resumo da loja', tarifas: 'Minhas tarifas', conta: 'Minha empresa', 'nova-chamada': 'Nova chamada', entregas: 'Central de entregas', empresas: 'Empresas parceiras', entregadores: 'Entregadores', bairros: 'Bairros e tarifas', usuarios: 'Usuários', financeiro: 'Financeiro', ajuda: 'Ajuda e operação' };
 export function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(null), [carregando, setCarregando] = useState(true);
   const [pagina, setPagina] = useState(location.hash.slice(1)), [menu, setMenu] = useState(false);
@@ -57,7 +58,8 @@ export function App() {
     <main className="conteudo">
       {usuario.tp_usr === 'ADMINISTRADOR' && <ControleSistema/>}
       {(atual === 'entregas' || atual === 'nova-chamada') && <Pedidos key={atual} abrirNovo={atual === 'nova-chamada'} usuario={usuario} revisao={versao} atualizar={atualizar} avisar={avisar} socket={socket} online={online}/>}
-      {['empresas','entregadores','bairros','usuarios'].includes(atual) && operacao && <Cadastros key={atual} pagina={atual} usuario={usuario} avisar={avisar} atualizar={atualizar} revisao={versao}/>}
+      {['empresas','entregadores','bairros'].includes(atual) && operacao && <Cadastros key={atual} pagina={atual} usuario={usuario} avisar={avisar} atualizar={atualizar} revisao={versao}/>}
+      {atual === 'usuarios' && operacao && <Usuarios usuario={usuario} avisar={avisar} revisao={versao} atualizar={atualizar}/>}
       {usuario.tp_usr === 'REMETENTE' && atual === 'resumo' && <PortalEmpresa usuario={usuario} revisao={versao}/>}
       {usuario.tp_usr === 'REMETENTE' && atual === 'tarifas' && <TarifasConsulta/>}
       {usuario.tp_usr === 'REMETENTE' && atual === 'conta' && <MinhaEmpresa usuario={usuario}/>}

@@ -38,7 +38,7 @@ export function Cadastros({ pagina, usuario, avisar, atualizar, revisao }: { pag
     {form && <CadastroForm pagina={pagina} registro={form.registro} usuario={usuario} fechar={() => setForm(null)} pronto={() => { setForm(null); atualizar(); avisar('Cadastro salvo com sucesso.'); }}/ >}
   </>;
 }
-function CadastroForm({ pagina, registro, usuario, fechar, pronto }: { pagina: string; registro?: Registro; usuario: Usuario; fechar: () => void; pronto: () => void }) {
+export function CadastroForm({ pagina, registro, usuario, fechar, pronto }: { pagina: string; registro?: Registro; usuario: Usuario; fechar: () => void; pronto: () => void }) {
   const [erro, setErro] = useState(''), [ocupado, setOcupado] = useState(false);
   const c = config[pagina], emp = registro as Empresa | undefined, ent = registro as Entregador | undefined, bai = registro as Bairro | undefined;
   const credenciais = !registro && ['empresas','entregadores'].includes(pagina);
