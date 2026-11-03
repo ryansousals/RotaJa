@@ -53,3 +53,14 @@ A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/
 - Cinco testes de navegador aprovados, incluindo as opções de login, controle geral com confirmação e exclusão de empresa fictícia preservando seu pedido concluído no histórico.
 - Teste de API verifica bloqueio de sessão existente e novos logins durante a pausa, acesso preservado do ADM, restauração do estado inicial, negação de exclusão por empresa e impossibilidade de reativação comum de cadastro excluído.
 - Capturas de login no celular e controle no painel inspecionadas. Proteções de limite de requisições mantidas; teste de controle aguarda uma janela separada após os testes de operação.
+
+### Relatórios e registro de caixa — 03/11/2026
+
+- API e frontend compilados. Oito testes unitários aprovados, incluindo cálculo com fundo/troco/parciais, precisão monetária e data de Fortaleza.
+- Integração HTTP com quatro formas de pagamento: relatório por empresa, negação de acesso cruzado, disponibilidade durante corrida, abertura única, fechamento idempotente, quitação e revogação de sessão.
+- Movimentos: exclusividade da operação, troco de entrada/saída, parcial por forma, rejeição de saldo excedido, idempotência e rejeição de alteração da mesma chave. Fechamento usa valores registrados e o saldo restante inclui fundo e troco, descontando parcial em dinheiro.
+- Restrição de consistência monetária do PostgreSQL atualizada por migração aditiva. Valores dos caixas antigos preservados.
+- Seis testes completos de navegador aprovados: operação, login móvel, financeiro anterior, portal da empresa, controle administrativo e relatório/caixa. O novo fluxo testa aba pendente padrão, filtro do entregador, registro de troco, parcial, detalhamento, diferença, quitação, CSV/PDF e logout com remoção do cookie.
+- Arquivamento geral testado em transação integralmente desfeita: acesso restrito, histórico imutável, repetição sem duplicação e bloqueio do dia encerrado.
+- Captura da tabela de pendentes inspecionada. Menu lateral recebeu rolagem para preservar acesso em janelas baixas.
+- Execuções criam registros fictícios identificados como teste; o teste de caixa geral não persiste dados.

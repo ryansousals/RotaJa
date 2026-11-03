@@ -55,8 +55,8 @@ test('operação, cliente e entregador completam um pedido real pelo frontend', 
     await expect(cliente.getByText('Destinatário Web '+sufixo,{exact:true})).toBeVisible();
     await page.getByRole('link', { name: 'Visão operacional' }).click(); await page.getByLabel('Buscar pedidos').fill('Destinatário Web '+sufixo);
     await expect(page.getByText('Destinatário Web '+sufixo,{exact:true})).toBeVisible();
-    await page.getByRole('combobox', { name: /Entregador do pedido/ }).selectOption({ label: 'Moto Web '+sufixo });
-    await expect(page.getByText('Aguardando aceite')).toBeVisible();
+    await page.getByRole('row').filter({ hasText: 'Destinatário Web '+sufixo }).getByRole('combobox', { name: /Entregador do pedido/ }).selectOption({ label: 'Moto Web '+sufixo });
+    await expect(page.getByRole('row').filter({ hasText: 'Destinatário Web '+sufixo }).getByText('Aguardando aceite')).toBeVisible();
     await page.screenshot({ path: 'test-results/painel-desktop.png', fullPage: true });
     await page.getByRole('link', { name: 'Central de ajuda' }).click();
     await login(moto, entEmail, senha); await moto.getByRole('button', { name: /Pedido #/ }).click();

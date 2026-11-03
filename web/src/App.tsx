@@ -6,13 +6,21 @@ import { Pedidos } from './Pedidos';
 import { Cadastros } from './Cadastros';
 import { PortalEmpresa, TarifasConsulta, MinhaEmpresa } from './PortalEmpresa';
 import { ControleSistema } from './ControleSistema';
+import { Relatorios } from './Relatorios';
+import { CaixaDiario } from './CaixaRegistro';
 import { Financeiro } from './Financeiro';
 export type Avisar = (mensagem: string, erro?: boolean) => void;
-const nomes: Record<string, string> = { resumo: 'Resumo da loja', tarifas: 'Minhas tarifas', conta: 'Minha empresa', 'nova-chamada': 'Nova chamada', entregas: 'Central de entregas', empresas: 'Empresas parceiras', entregadores: 'Entregadores', bairros: 'Bairros e tarifas', usuarios: 'Usuários e acessos', financeiro: 'Financeiro', ajuda: 'Ajuda e operação' };
+const nomes: Record<string, string> = { relatorios: 'Relatórios', caixa: 'Caixa diário', resumo: 'Resumo da loja', tarifas: 'Minhas tarifas', conta: 'Minha empresa', 'nova-chamada': 'Nova chamada', entregas: 'Central de entregas', empresas: 'Empresas parceiras', entregadores: 'Entregadores', bairros: 'Bairros e tarifas', usuarios: 'Usuários e acessos', financeiro: 'Financeiro', ajuda: 'Ajuda e operação' };
 export function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(null), [carregando, setCarregando] = useState(true);
   const [pagina, setPagina] = useState(location.hash.slice(1)), [menu, setMenu] = useState(false);
   const [versao, setVersao] = useState(0), [socket, setSocket] = useState<Socket | null>(null), [online, setOnline] = useState(false);
+  const [saindo, setSaindo] = useState(false);
+  async function sair() {
+    setSaindo(true);
+    try { await api('/autenticacao/sair', {}); socket?.disconnect(); setUsuario(null); setMenu(false); setAviso(null); history.replaceState(null, '', location.pathname); }
+    catch(e) { avisar((e as Error).message, true); } finally { setSaindo(false); }
+  }
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const avisar = useCallback<Avisar>((texto, erro = false) => setAviso({ texto, erro }), []);
   const agendado = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -36,16 +44,16 @@ export function App() {
   if (carregando) return <div className="iniciando"><Marca/><p>Conectando à sua operação…</p></div>;
   if (!usuario) return <><Login entrar={u => { setUsuario(u); location.hash = u.tp_usr === 'REMETENTE' ? 'resumo' : 'entregas'; }} />{aviso && <div role="alert" className="toast erro">{aviso.texto}</div>}</>;
   const operacao = eOperador(usuario);
-  const nav = operacao ? [['entregas', LayoutDashboard],['empresas', Building2],['entregadores', Bike],['bairros', MapPinned],['financeiro', Wallet],['usuarios', Users]] as const : usuario.tp_usr === 'REMETENTE' ? [['resumo', LayoutDashboard],['entregas', Package],['financeiro', Wallet],['tarifas', MapPinned],['conta', Building2]] as const : [['entregas', Package],['financeiro', Wallet]] as const;
+  const nav = operacao ? [['entregas', LayoutDashboard],['empresas', Building2],['entregadores', Bike],['bairros', MapPinned],['financeiro', Wallet],['relatorios', Package],['caixa', Wallet],['usuarios', Users]] as const : usuario.tp_usr === 'REMETENTE' ? [['resumo', LayoutDashboard],['entregas', Package],['financeiro', Wallet],['relatorios', Package],['tarifas', MapPinned],['conta', Building2]] as const : [['entregas', Package],['financeiro', Wallet],['relatorios', Package],['caixa', Wallet]] as const;
   const atual = nav.some(([p]) => p === pagina) || pagina === 'ajuda' || pagina === 'nova-chamada' && usuario.tp_usr === 'REMETENTE' ? pagina : usuario.tp_usr === 'REMETENTE' ? 'resumo' : 'entregas';
   return <div className="app-shell">
     {menu && <button aria-label="Fechar navegação" className="cortina" onClick={() => setMenu(false)}/>}
     <aside className={`sidebar ${menu ? 'aberto' : ''}`}><a href="#entregas" className="marca-link"><Marca/></a><div className="area-rotulo">{operacao ? 'WORKSPACE · OPERAÇÃO' : usuario.tp_usr === 'REMETENTE' ? 'PORTAL DO CLIENTE' : 'ESPAÇO DO ENTREGADOR'}</div>
       <div className="central"><span className="central-logo"><Building2 size={17}/></span><div><strong>{usuario.empresa?.nom_fan ?? 'Central RotaJá'}</strong><small>Gestão de logística</small></div><ChevronRight size={14}/></div>
       <span className="nav-legenda">PRINCIPAL</span><nav>{nav.map(([p, Icone]) => <a key={p} href={'#' + p} onClick={() => setMenu(false)} className={atual === p ? 'selecionado' : ''}><Icone size={18}/><span>{p === 'entregas' ? usuario.tp_usr === 'REMETENTE' ? 'Minhas chamadas' : usuario.tp_usr === 'ENTREGADOR' ? 'Minhas corridas' : 'Visão operacional' : nomes[p]}</span>{atual === p && <span className="nav-ponto"/>}</a>)}</nav>
-      <div className="sidebar-inferior"><div className="dica"><Zap size={17}/><strong>Sua operação, conectada.</strong><p>Da chamada à entrega, tudo em um só lugar.</p></div><a href="#ajuda" className="ajuda-link"><CircleHelp size={17}/>Central de ajuda<ArrowUpRight size={14}/></a><div className="perfil"><span className="avatar">{usuario.nom_usr.slice(0,2).toUpperCase()}</span><div><strong>{usuario.nom_usr}</strong><small>{operacao ? 'Equipe de operação' : usuario.tp_usr === 'REMETENTE' ? 'Cliente parceiro' : 'Entregador'}</small></div><button title="Sair" aria-label="Sair da conta" className="icone" onClick={async () => { try { await api('/autenticacao/sair', {}); setUsuario(null); } catch (e) { avisar((e as Error).message, true); } }}><LogOut size={17}/></button></div></div>
+      <div className="sidebar-inferior"><div className="dica"><Zap size={17}/><strong>Sua operação, conectada.</strong><p>Da chamada à entrega, tudo em um só lugar.</p></div><a href="#ajuda" className="ajuda-link"><CircleHelp size={17}/>Central de ajuda<ArrowUpRight size={14}/></a><div className="perfil"><span className="avatar">{usuario.nom_usr.slice(0,2).toUpperCase()}</span><div><strong>{usuario.nom_usr}</strong><small>{operacao ? 'Equipe de operação' : usuario.tp_usr === 'REMETENTE' ? 'Cliente parceiro' : 'Entregador'}</small></div><button title="Sair" aria-label="Sair da conta" className="icone" disabled={saindo} onClick={sair}><LogOut size={17}/></button></div></div>
     </aside>
-    <div className="principal"><header className="topbar"><div className="breadcrumb"><button className="icone hamburguer" aria-label="Abrir menu" onClick={() => setMenu(true)}><Menu size={22}/></button><span>Workspace</span><ChevronRight size={14}/><strong>{nomes[atual]}</strong></div><div className="topbar-direita"><span className={`conexao ${online ? '' : 'offline'}`}><i/>{online ? 'Tempo real conectado' : 'Reconectando…'}</span><span className="data-topo">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</span><span className="avatar pequeno">{usuario.nom_usr[0]}</span></div></header>
+    <div className="principal"><header className="topbar"><div className="breadcrumb"><button className="icone hamburguer" aria-label="Abrir menu" onClick={() => setMenu(true)}><Menu size={22}/></button><span>Workspace</span><ChevronRight size={14}/><strong>{nomes[atual]}</strong></div><div className="topbar-direita"><span className={`conexao ${online ? '' : 'offline'}`}><i/>{online ? 'Tempo real conectado' : 'Reconectando…'}</span><span className="data-topo">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</span><span className="avatar pequeno">{usuario.nom_usr[0]}</span><span className="nome-topo">{usuario.nom_usr}</span><button className="btn compacto" aria-label="Sair pelo topo" disabled={saindo} onClick={sair}><LogOut size={16}/>{saindo ? 'Saindo…' : 'Sair'}</button></div></header>
     <main className="conteudo">
       {usuario.tp_usr === 'ADMINISTRADOR' && <ControleSistema/>}
       {(atual === 'entregas' || atual === 'nova-chamada') && <Pedidos key={atual} abrirNovo={atual === 'nova-chamada'} usuario={usuario} revisao={versao} atualizar={atualizar} avisar={avisar} socket={socket} online={online}/>}
@@ -53,6 +61,8 @@ export function App() {
       {usuario.tp_usr === 'REMETENTE' && atual === 'resumo' && <PortalEmpresa usuario={usuario} revisao={versao}/>}
       {usuario.tp_usr === 'REMETENTE' && atual === 'tarifas' && <TarifasConsulta/>}
       {usuario.tp_usr === 'REMETENTE' && atual === 'conta' && <MinhaEmpresa usuario={usuario}/>}
+      {atual === 'relatorios' && <Relatorios usuario={usuario}/>}
+      {atual === 'caixa' && usuario.tp_usr !== 'REMETENTE' && <CaixaDiario usuario={usuario}/>}
       {atual === 'financeiro' && <Financeiro usuario={usuario} avisar={avisar} atualizar={atualizar} revisao={versao}/>}
       {atual === 'ajuda' && <><div className="pagina-titulo"><div><span className="sobretitulo">SUPORTE À OPERAÇÃO</span><h1>Como funciona o RotaJá</h1><p>Um fluxo simples para cada etapa da entrega.</p></div></div><div className="ajuda-grid">{[['01','Cadastre sua rede','Na operação, cadastre empresas, entregadores e bairros. A loja e o entregador recebem acessos individuais definidos no cadastro.'],['02','Abra uma chamada','Entre com o acesso da loja, escolha um bairro permitido e informe destinatário, endereço, retorno e cobrança.'],['03','Despache e acompanhe','Selecione o entregador na tabela. Ele aceita a corrida e avança pela coleta, entrega e retorno, quando houver.'],['04','Confira o financeiro','Filtre o período, gere o fechamento e confira o comprovante antes da quitação. Saldo negativo indica crédito do entregador.']].map(([n,t,d]) => <article className="cartao ajuda-card" key={n}><span>{n}</span><h2>{t}</h2><p>{d}</p></article>)}</div><div className="aviso">O compartilhamento de localização no navegador funciona enquanto a página estiver aberta e depende da sua permissão. Para rastreamento contínuo em segundo plano, utilize a integração Expo disponível no projeto.</div></>}
       <footer className="rodape"><span>RotaJá · Gestão de entregas</span><span><ShieldCheck size={13}/> Ambiente local · v0.2.0</span></footer>
