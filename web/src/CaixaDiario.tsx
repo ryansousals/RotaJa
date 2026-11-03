@@ -1,7 +1,6 @@
 import { useEffect,useState } from 'react';
 import { api,data,reais,eOperador,type Usuario,type Entregador } from './api';
 import { Modal,Campo,Selecao,Formulario } from './ui';
-import { hojeRel } from './Relatorios';
 type Valores=Record<'dinheiro'|'cartao'|'pix'|'online',string>;
 type Abertura={id_ab:string;id_ent:string;dt_ab:string;vlr_ab:string;obs_ab:string;entregador:{usuario:{nom_usr:string}}};
 type Conferencia={sistema:Valores;informado:Valores;abertura:string;parcial:string;outros:string;pos_meia_noite:string;observacoes:string;total_sistema:string;total_informado:string;total_esperado:string;diferenca:string};
@@ -9,9 +8,15 @@ export type Caixa={id_cx:string;dt_ini:string;dt_fim:string;st_cx:string;vlr_tot
 export type Previa={troco:string;total_parcial:string;parcial:Valores;ab:Abertura;sistema:Valores;dt_fim:string;resumo:{vlr_tot_ganho:string;vlr_saldo_rep_adm:string;qtd_peds:number}};
 const nomes={dinheiro:'Dinheiro',cartao:'Cartão',pix:'Pix',online:'Pagamento online'};
 const cents=(v:string)=>Math.round(Number(v||0)*100);
+function horarioAtualFortaleza() {
+ const partes = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Fortaleza', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+ const valor = (tipo: string) => partes.find(p => p.type === tipo)!.value;
+ return `${valor('year')}-${valor('month')}-${valor('day')}T${valor('hour')}:${valor('minute')}:${valor('second')}`;
+}
 export function Abrir({usuario,fechar,pronto}:{usuario:Usuario;fechar:()=>void;pronto:()=>void}){
+ const [inicio] = useState(horarioAtualFortaleza);
  const [ent,setEnt]=useState<Entregador[]>([]),[erro,setErro]=useState(''),[ocupado,setOcupado]=useState(false);useEffect(()=>{if(eOperador(usuario))api<Entregador[]>('/entregadores').then(setEnt).catch(e=>setErro(e.message));},[usuario]);
- return <Modal titulo="Abertura de caixa" fechar={fechar}><Formulario erro={erro} ocupado={ocupado} rotulo="Salvar abertura" enviar={async d=>{setOcupado(true);try{await api('/caixa-diario/abrir',{...d,id_ent:eOperador(usuario)?d.id_ent:usuario.entregador?.id_ent,dt_ab:new Date(d.dt_ab+'-03:00').toISOString()});pronto();}catch(e){setErro((e as Error).message);}finally{setOcupado(false);}}}>{eOperador(usuario)?<Selecao titulo="Entregador" nome="id_ent"><option value="" disabled>Selecione</option>{ent.filter(e=>e.st_atv).map(e=><option key={e.id_ent} value={e.id_ent}>{e.usuario.nom_usr}</option>)}</Selecao>:<p>{usuario.nom_usr}</p>}<Campo titulo="Início (horário de Fortaleza)" nome="dt_ab" tipo="datetime-local" passo="1" valor={hojeRel()+'T00:00:00'}/><Campo titulo="Valor da abertura" nome="vlr_ab" tipo="number" passo="0.01" min="0" valor="0"/><Campo titulo="Observações da abertura" nome="obs_ab" obrigatorio={false}/></Formulario></Modal>;
+ return <Modal titulo="Abertura de caixa" fechar={fechar}><Formulario erro={erro} ocupado={ocupado} rotulo="Salvar abertura" enviar={async d=>{setOcupado(true);try{await api('/caixa-diario/abrir',{...d,id_ent:eOperador(usuario)?d.id_ent:usuario.entregador?.id_ent,dt_ab:new Date(d.dt_ab+'-03:00').toISOString()});pronto();}catch(e){setErro((e as Error).message);}finally{setOcupado(false);}}}>{eOperador(usuario)?<Selecao titulo="Entregador" nome="id_ent"><option value="" disabled>Selecione</option>{ent.filter(e=>e.st_atv).map(e=><option key={e.id_ent} value={e.id_ent}>{e.usuario.nom_usr}</option>)}</Selecao>:<p>{usuario.nom_usr}</p>}<Campo titulo="Início (horário de Fortaleza)" nome="dt_ab" tipo="datetime-local" passo="1" valor={inicio}/><Campo titulo="Valor da abertura" nome="vlr_ab" tipo="number" passo="0.01" min="0" valor="0"/><Campo titulo="Observações da abertura" nome="obs_ab" obrigatorio={false}/></Formulario></Modal>;
 }
 export function Resumo({c,ganho}:{c:Pick<Conferencia,'total_sistema'|'total_informado'|'parcial'|'abertura'|'total_esperado'|'diferenca'>;ganho:string}){return <div className="totais-caixa">{[['Total no sistema',c.total_sistema],['Total informado',c.total_informado],['Fechamento parcial',c.parcial],['Valor da abertura',c.abertura],['Total em entregas (ganhos)',ganho],['Total esperado',c.total_esperado],['Diferença de caixa',c.diferenca]].map(([n,v])=><div key={n}><small>{n}</small><strong className={n==='Diferença de caixa'&&Number(v)<0?'valor-negativo':''}>{reais(v)}</strong></div>)}</div>;}
 export function Fechar({previa:p,sair,pronto}:{previa:Previa;sair:()=>void;pronto:()=>void}){
