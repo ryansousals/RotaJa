@@ -13,7 +13,7 @@ export async function api<T>(rota: string, dados?: unknown, metodo = dados === u
 }
 export const reais = (v: string | number | null | undefined) => Number(v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 export const data = (v: string) => new Date(v).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-export const status: Record<string, string> = { PREPARANDO: 'Preparando', ATRIBUIDO: 'A recolher', ACEITO: 'Aceito', EM_COLETA: 'Em coleta', NO_LOCAL: 'No local', EM_ENTREGA: 'Em entrega', EM_RETORNO: 'Em retorno', CONCLUIDO: 'Concluído', CANCELADO: 'Cancelado' };
+export const status: Record<string, string> = { PRONTO: 'Pronto', ATRIBUIDO: 'Pronto · aguardando aceite', ACEITO: 'A recolher', EM_COLETA: 'A recolher', NO_LOCAL: 'A recolher', EM_ENTREGA: 'Enviando', EM_RETORNO: 'Enviando', CONCLUIDO: 'Concluído', CANCELADO: 'Cancelado' };
 export type Usuario = { id_usr: string; nom_usr: string; eml_usr: string; tp_usr: 'ADMINISTRADOR' | 'OPERADOR' | 'REMETENTE' | 'ENTREGADOR'; st_atv?: boolean; empresa?: Empresa; entregador?: Entregador };
 export type Empresa = { id_emp: string; id_usr: string; nom_fan: string; raz_soc: string; tp_pes: string; doc_emp: string; log_emp: string; num_emp: string; bai_emp: string; cid_emp: string; uf_emp: string; tel_emp: string; cmp_emp?: string; st_atv: boolean };
 export type Entregador = { id_ent: string; id_usr: string; doc_cpf: string; pla_moto: string; tel_ent: string; st_atv: boolean; usuario: { nom_usr: string; eml_usr: string; st_atv: boolean } };

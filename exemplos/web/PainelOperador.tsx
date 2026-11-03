@@ -13,7 +13,7 @@ export function PainelOperador({ token, api }: { token: string; api: string }) {
     let ativo = true;
     async function carregar() {
       try {
-        const resultados = await Promise.all(['/pedidos', '/entregadores'].map(url => fetch(api + url, { headers: { Authorization: `Bearer ${token}` } })));
+        const resultados = await Promise.all(['/pedidos', '/entregadores?caixa_aberto=true'].map(url => fetch(api + url, { headers: { Authorization: `Bearer ${token}` } })));
         if (resultados.some(r => !r.ok)) throw new Error('Não foi possível carregar a operação');
         const [lista, ent] = await Promise.all(resultados.map(r => r.json()));
         if (ativo) { setPedidos(lista.itens); setEntregadores(ent); }
@@ -33,7 +33,7 @@ export function PainelOperador({ token, api }: { token: string; api: string }) {
       <tbody>{pedidos.map(p => { const min = Math.floor((agora - Date.parse(p.dt_cad)) / 60000); return <tr key={p.id_ped} className="border-t border-slate-800">
         <td className="p-3">#{p.num_ped}<span className={`ml-2 rounded px-2 py-1 ${p.st_ped === 'CONCLUIDO' ? 'bg-green-900' : min >= 20 ? 'bg-red-900' : 'bg-amber-900'}`}>{min} min</span></td>
         <td>{p.nom_dest}</td><td>{p.bairro.nom_bai}</td><td>{p.empresa.nom_fan}</td><td>{p.st_ped}</td>
-        <td><select aria-label={`Entregador do pedido ${p.num_ped}`} value={p.id_ent ?? ''} disabled={!['PREPARANDO','ATRIBUIDO'].includes(p.st_ped)} className="rounded bg-slate-800 p-2" onChange={e => {
+        <td><select aria-label={`Entregador do pedido ${p.num_ped}`} value={p.id_ent ?? ''} disabled={!['PRONTO','ATRIBUIDO'].includes(p.st_ped)} className="rounded bg-slate-800 p-2" onChange={e => {
           socket.timeout(5000).emit('pedido:despachar', { id_ped: p.id_ped, id_ent: e.target.value, versao: p.versao }, (falha: unknown, resposta: { ok: boolean; mensagem?: string }) => {
             if (falha || !resposta?.ok) setErro(resposta?.mensagem ?? 'Conexão indisponível. Atualize a lista antes de tentar novamente.');
           });

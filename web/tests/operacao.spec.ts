@@ -29,6 +29,12 @@ test('operação, cliente e entregador completam um pedido real pelo frontend', 
   await page.getByLabel('Nome do responsável').fill('Moto Web '+sufixo); await page.getByLabel('E-mail de acesso').fill(entEmail); await page.getByLabel('Senha inicial').fill(senha);
   await page.getByLabel('CPF (somente números)').fill(documento(11)); await page.getByLabel('Placa da moto').fill('WEB1A23'); await page.getByLabel('Telefone com DDD').fill('5589999999001');
   await page.getByRole('button', { name: 'Salvar cadastro' }).click(); await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('link',{name:'Caixa diário',exact:true}).click();
+  await page.getByRole('button',{name:'Abrir caixa',exact:true}).click();
+  await page.getByRole('dialog').getByLabel('Entregador',{exact:false}).selectOption({label:'Moto Web '+sufixo});
+  await page.getByLabel('Valor da abertura').fill('0');
+  await page.getByRole('button',{name:'Salvar abertura'}).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('link', { name: 'Bairros e tarifas', exact: true }).click(); await page.getByRole('button', { name: 'Cadastrar bairro' }).click();
   await page.getByLabel('Nome do bairro').fill('Bairro Web '+sufixo); await page.getByLabel('Cidade').fill('Floriano'); await page.getByLabel('UF').fill('PI');
   await page.getByRole('button', { name: 'Salvar cadastro' }).click(); await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -56,13 +62,13 @@ test('operação, cliente e entregador completam um pedido real pelo frontend', 
     await page.getByRole('link', { name: 'Visão operacional' }).click(); await page.getByLabel('Buscar pedidos').fill('Destinatário Web '+sufixo);
     await expect(page.getByText('Destinatário Web '+sufixo,{exact:true})).toBeVisible();
     await page.getByRole('row').filter({ hasText: 'Destinatário Web '+sufixo }).getByRole('combobox', { name: /Entregador do pedido/ }).selectOption({ label: 'Moto Web '+sufixo });
-    await expect(page.getByRole('row').filter({ hasText: 'Destinatário Web '+sufixo }).getByText('Aguardando aceite')).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Destinatário Web '+sufixo }).getByText('Aguardando aceite', {exact:true})).toBeVisible();
     await page.screenshot({ path: 'test-results/painel-desktop.png', fullPage: true });
     await page.getByRole('link', { name: 'Central de ajuda' }).click();
     await login(moto, entEmail, senha); await moto.getByRole('button', { name: /Pedido #/ }).click();
-    for (const etapa of ['Aceitar corrida','Iniciar coleta','Cheguei no local','Iniciar entrega','Concluir entrega']) {
+    for (const etapa of ['Aceitar','Recolhido','Finalizar Entrega']) {
       await moto.getByRole('button', { name: etapa, exact: true }).click();
-      if (etapa === 'Concluir entrega') await moto.getByLabel('Como foi recebido?').selectOption('DINHEIRO');
+      if (etapa === 'Finalizar Entrega') await moto.getByLabel('Como foi recebido?').selectOption('DINHEIRO');
       await moto.getByRole('button', { name: 'Confirmar etapa' }).click();
       await expect(moto.getByRole('dialog')).toHaveCount(1);
     }
@@ -85,11 +91,11 @@ test('layout de login se adapta a uma tela de celular', async ({ page }) => {
 test('caixa e repasse são gerados e conferidos pelas telas financeiras', async ({ page, browser }) => {
   // Usa a corrida criada no fluxo anterior: os testes deste arquivo são sequenciais.
   await login(page, entEmail, senha);
-  await page.getByRole('link', { name: 'Financeiro', exact: true }).click();
-  await page.getByRole('button', { name: 'Fechar caixa', exact: true }).click();
+  await page.getByRole('link', { name: 'Caixa diário', exact: true }).click();
+  await page.getByRole('button', { name: 'Fechar caixa de Moto Web '+sufixo, exact: true }).click();
   const fim = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,19);
-  await page.getByLabel('Fim exclusivo').fill(fim);
-  await page.getByRole('button', { name: 'Gerar fechamento' }).click();
+  await page.getByLabel('Dinheiro informado').fill('100');
+  await page.getByRole('button', { name: 'Salvar fechamento' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('cell', { name: 'Aguardando validação', exact: true })).toBeVisible();
   const adminContexto = await browser.newContext(); const admin = await adminContexto.newPage();

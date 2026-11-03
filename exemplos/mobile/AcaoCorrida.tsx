@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-const acoes: Record<string, [string, string]> = { ATRIBUIDO: ['Aceitar','ACEITO'], ACEITO: ['Iniciar coleta','EM_COLETA'], EM_COLETA: ['Cheguei no local','NO_LOCAL'], NO_LOCAL: ['Iniciar entrega','EM_ENTREGA'], EM_ENTREGA: ['Concluir entrega','CONCLUIDO'], EM_RETORNO: ['Concluir retorno','CONCLUIDO'] };
+const acoes: Record<string, [string, string]> = { ATRIBUIDO: ['Aceitar','ACEITO'], ACEITO: ['Recolhido','EM_ENTREGA'], EM_COLETA: ['Recolhido','EM_ENTREGA'], NO_LOCAL: ['Recolhido','EM_ENTREGA'], EM_ENTREGA: ['Finalizar Entrega','CONCLUIDO'], EM_RETORNO: ['Finalizar Entrega','CONCLUIDO'] };
 export function AcaoCorrida({ api, pedido, atualizar, tp_rec }: { api: string; pedido: { id_ped: string; versao: number; st_ped: string; st_ret: boolean; st_pag: string }; atualizar: () => void; tp_rec?: 'DINHEIRO' | 'PIX_LOJA' | 'CARTAO_LOJA' }) {
   const [erro, setErro] = useState(''), [ocupado, setOcupado] = useState(false);
-  const acao = pedido.st_ped === 'EM_ENTREGA' && pedido.st_ret ? ['Iniciar retorno','EM_RETORNO'] : acoes[pedido.st_ped];
+  const acao = acoes[pedido.st_ped];
   if (!acao) return <Text>Corrida encerrada</Text>;
   return <View style={{ padding: 24, backgroundColor: '#0F172A' }}><Text style={{ color: '#fff' }}>{erro}</Text><Pressable disabled={ocupado} accessibilityRole="button" style={{ padding: 24, backgroundColor: '#1D4ED8', borderRadius: 12 }} onPress={async () => {
     setOcupado(true);

@@ -64,3 +64,5 @@ A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/
 - Arquivamento geral testado em transação integralmente desfeita: acesso restrito, histórico imutável, repetição sem duplicação e bloqueio do dia encerrado.
 - Captura da tabela de pendentes inspecionada. Menu lateral recebeu rolagem para preservar acesso em janelas baixas.
 - Execuções criam registros fictícios identificados como teste; o teste de caixa geral não persiste dados.
+
+03/11/2026 — fluxo simplificado: testes de domínio cobrem a sequência obrigatória e compatibilidade dos estados antigos. verificar-relatorios.ts também verifica PRONTO inicial, lista com caixa aberto, despacho recusado após fechar, exclusão recusada antes do acerto e bloqueio de acesso após excluir. O teste visual de relatórios confirma a modal e a retirada do cadastro da lista.

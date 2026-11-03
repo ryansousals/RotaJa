@@ -35,7 +35,7 @@ Snapshot do endereço da loja, frete e ganho protege pedidos antigos contra alte
 
 ## Estados da corrida
 
-PREPARANDO → ATRIBUIDO → ACEITO → EM_COLETA → NO_LOCAL → EM_ENTREGA → CONCLUIDO. Com retorno, EM_ENTREGA → EM_RETORNO → CONCLUIDO. ORIGEM inverte o trajeto: coleta no endereço informado e entrega na loja. O snapshot distingue os dois pontos.
+PRONTO → ATRIBUIDO → ACEITO (A recolher) → EM_ENTREGA (Enviando) → CONCLUIDO. Ações: Aceitar, Recolhido e Finalizar Entrega. O retorno, quando contratado, deve ser completado antes da finalização. O despacho exige caixa aberto no turno. ORIGEM inverte o trajeto: coleta no endereço informado e entrega na loja. O snapshot distingue os dois pontos.
 
 Aceite valida o entregador atual. Redespacho só ocorre antes do aceite. Versão otimista impede que duas telas sobrescrevam a mesma versão. Cancelamentos depois de iniciar a entrega precisam de fluxo de incidente e reversão financeira, ainda não implementado. Operadores têm leitura irrestrita e edição auditada dos pedidos abertos. Para manter caixa consistente, a base bloqueia reescrita de pedidos encerrados: ajustes pós-fechamento devem ser implementados como lançamentos compensatórios e auditados.
 

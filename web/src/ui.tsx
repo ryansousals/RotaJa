@@ -18,7 +18,7 @@ export function Formulario({ children, enviar, ocupado, erro, rotulo = 'Salvar c
 }
 export function Vazio({ titulo = 'Nenhum registro por aqui', texto = 'Os novos registros aparecerão nesta lista.', children }: { titulo?: string; texto?: string; children?: ReactNode }) { return <div className="vazio"><PackageSearch size={36}/><h3>{titulo}</h3><p>{texto}</p>{children}</div>; }
 export function Badge({ valor }: { valor: string }) {
-  const classe = ['CONCLUIDO','QUITADO','PAGO','RECEBIDO'].includes(valor) ? 'verde' : ['CANCELADO','A_RECEBER','PENDENTE'].includes(valor) ? 'vermelho' : ['PREPARANDO','AGUARDANDO_VALIDACAO'].includes(valor) ? 'ambar' : 'azul';
+  const classe = ['CONCLUIDO','QUITADO','PAGO','RECEBIDO'].includes(valor) ? 'verde' : ['CANCELADO','A_RECEBER','PENDENTE'].includes(valor) ? 'vermelho' : ['PRONTO','AGUARDANDO_VALIDACAO'].includes(valor) ? 'ambar' : 'azul';
   const nomes: Record<string,string> = { PAGO: 'Pago', RECEBIDO: 'Recebido', A_RECEBER: 'A receber', PENDENTE: 'Pendente', AGUARDANDO_VALIDACAO: 'Aguardando validação', QUITADO: 'Quitado' };
   return <span className={`badge ${classe}`}><i/>{nomes[valor] ?? status[valor] ?? valor.replaceAll('_',' ').toLowerCase()}</span>;
 }
