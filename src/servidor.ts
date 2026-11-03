@@ -102,7 +102,7 @@ app.post('/entregadores', async (req, res) => {
   if (u?.tp_usr !== 'ENTREGADOR') throw new Falha(422, 'Usuário deve ter perfil entregador');
   res.status(201).json(await banco.ent_entregadores.create({ data: d }));
 });
-app.get('/entregadores', async (_req, res) => { exigirOperador(ator(res)); res.json(await banco.ent_entregadores.findMany({ include: { usuario: { select: { nom_usr: true, eml_usr: true, st_atv: true } } }, orderBy: { usuario: { nom_usr: 'asc' } } })); });
+app.get('/entregadores', async (req, res) => { exigirOperador(ator(res)); res.json(await banco.ent_entregadores.findMany({ where: { dt_exc: null, ...(req.query.caixa_aberto === 'true' ? { st_atv: true, usuario: { st_atv: true }, aberturas: { some: { id_cx: null, dt_ab: { lte: new Date() } } } } : {}) }, include: { usuario: { select: { nom_usr: true, eml_usr: true, st_atv: true } } }, orderBy: { usuario: { nom_usr: 'asc' } } })); });
 app.get('/bairros', async (_req, res) => {
   const a = ator(res);
   const emp = a.tp_usr === 'REMETENTE' ? await banco.emp_empresas.findUnique({ where: { id_usr: a.id_usr } }) : null;
@@ -131,7 +131,7 @@ async function escopo(a: Ator): Promise<Prisma.ped_pedidosWhereInput> {
 app.get('/pedidos', async (req, res) => {
   const pagina = z.coerce.number().int().min(1).max(100000).default(1).parse(req.query.pagina);
   const where = await escopo(ator(res));
-  const filtro = z.object({ busca: z.string().max(120).optional(), status: z.enum(['PREPARANDO','ATRIBUIDO','ACEITO','EM_COLETA','NO_LOCAL','EM_ENTREGA','EM_RETORNO','CONCLUIDO','CANCELADO','ATIVOS']).optional() }).parse(req.query);
+  const filtro = z.object({ busca: z.string().max(120).optional(), status: z.enum(['PRONTO','ATRIBUIDO','ACEITO','EM_COLETA','NO_LOCAL','EM_ENTREGA','EM_RETORNO','CONCLUIDO','CANCELADO','ATIVOS']).optional() }).parse(req.query);
   if (filtro.status) where.st_ped = filtro.status === 'ATIVOS' ? { notIn: ['CONCLUIDO','CANCELADO'] } : filtro.status;
   if (filtro.busca) where.OR = [{ nom_dest: { contains: filtro.busca, mode: 'insensitive' } }, { empresa: { nom_fan: { contains: filtro.busca, mode: 'insensitive' } } }, ...( /^\d{1,9}$/.test(filtro.busca) ? [{ num_ped: Number(filtro.busca) }] : [])];
   const [total, itens] = await banco.$transaction([banco.ped_pedidos.count({ where }), banco.ped_pedidos.findMany({ where, take: 20, skip: (pagina - 1) * 20, orderBy: { dt_cad: 'desc' }, include: { bairro: true, empresa: { select: { nom_fan: true } }, entregador: { select: { id_ent: true, usuario: { select: { nom_usr: true } } } } } })]);

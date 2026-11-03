@@ -29,6 +29,7 @@ export function registrarPainel(app: Express, redis: Redis) {
   app.patch('/usuarios/:id', async (req, res) => {
     exigir(res); const id_usr = id.parse(req.params.id);
     const alvo = await banco.usr_usuarios.findUniqueOrThrow({ where: { id_usr } });
+    if (await banco.ent_entregadores.findFirst({where:{id_usr,dt_exc:{not:null}}})) throw new Falha(409,'Cadastro de entregador excluído');
     if (alvo.tp_usr === 'ADMINISTRADOR' || (alvo.tp_usr === 'OPERADOR' && ator(res).tp_usr !== 'ADMINISTRADOR') || id_usr === ator(res).id_usr) throw new Falha(403, 'Este usuário não pode ser alterado nesta tela');
     res.json(await banco.usr_usuarios.update({ where: { id_usr }, data: z.object({ st_atv: z.boolean() }).strict().parse(req.body), select: { id_usr: true, st_atv: true } }));
   });
@@ -44,7 +45,7 @@ export function registrarPainel(app: Express, redis: Redis) {
     const { nom_usr, eml_usr, senha, ...entregador } = d; const sen_hash = await hash(senha, 12);
     res.status(201).json(await transacao(async tx => { const u = await tx.usr_usuarios.create({ data: { nom_usr, eml_usr, sen_hash, tp_usr: 'ENTREGADOR' } }); return tx.ent_entregadores.create({ data: { ...entregador, id_usr: u.id_usr } }); }));
   });
-  app.patch('/entregadores/:id', async (req, res) => { exigir(res); res.json(await banco.ent_entregadores.update({ where: { id_ent: id.parse(req.params.id) }, data: z.object({ st_atv: z.boolean(), pla_moto: z.string().min(7).max(8).optional(), tel_ent: z.string().regex(/^\+?\d{10,15}$/).optional() }).parse(req.body) })); });
+  app.patch('/entregadores/:id', async (req, res) => { exigir(res); res.json(await banco.ent_entregadores.update({ where: { id_ent: id.parse(req.params.id), dt_exc: null }, data: z.object({ st_atv: z.boolean(), pla_moto: z.string().min(7).max(8).optional(), tel_ent: z.string().regex(/^\+?\d{10,15}$/).optional() }).parse(req.body) })); });
   app.patch('/bairros/:id', async (req, res) => { if (ator(res).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente o administrador altera bairros e tarifas'); res.json(await banco.bai_bairros.update({ where: { id_bai: id.parse(req.params.id) }, data: z.object({ nom_bai: z.string().min(2).optional(), vlr_tx_ent: moeda.optional(), vlr_ganho_ent: moeda.optional(), vlr_tx_ret: moeda.optional(), vlr_ganho_ret: moeda.optional(), st_atv: z.boolean().optional() }).strict().parse(req.body) })); });
   app.get('/painel', async (_req, res) => {
     const a = ator(res); const escopo = operador(a.tp_usr) ? {} : a.tp_usr === 'REMETENTE' ? { id_usr: a.id_usr } : { entregador: { id_usr: a.id_usr } };
@@ -68,7 +69,7 @@ export function registrarPainel(app: Express, redis: Redis) {
     const a = ator(res), id_ped = id.parse(req.params.id);
     const p = await banco.ped_pedidos.findFirst({ where: { id_ped, ...(operador(a.tp_usr) ? {} : a.tp_usr === 'REMETENTE' ? { id_usr: a.id_usr } : { entregador: { id_usr: a.id_usr } }) } });
     if (!p) throw new Falha(404, 'Pedido não encontrado');
-    const posicao = ['CONCLUIDO','CANCELADO','PREPARANDO','ATRIBUIDO'].includes(p.st_ped) ? null : await redis.get(`gps:${id_ped}`);
+    const posicao = ['CONCLUIDO','CANCELADO','PRONTO','ATRIBUIDO'].includes(p.st_ped) ? null : await redis.get(`gps:${id_ped}`);
     res.json(posicao ? JSON.parse(posicao) : null);
   });
 }

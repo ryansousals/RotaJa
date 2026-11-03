@@ -1,0 +1,2 @@
+ALTER TYPE "st_pedido" RENAME VALUE 'PREPARANDO' TO 'PRONTO';
+ALTER TABLE "ent_entregadores" ADD COLUMN "dt_exc" TIMESTAMPTZ(3);

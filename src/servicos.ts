@@ -65,8 +65,9 @@ export async function despachar(ator: Ator, entrada: unknown) {
   return transacao(async tx => {
     const p = await tx.ped_pedidos.findUniqueOrThrow({ where: { id_ped: d.id_ped } });
     const ent = await tx.ent_entregadores.findUnique({ where: { id_ent: d.id_ent }, include: { usuario: true } });
-    if (!ent?.st_atv || !ent.usuario.st_atv) throw new Falha(422, 'Entregador inativo');
-    if (!['PREPARANDO','ATRIBUIDO'].includes(p.st_ped)) throw new Falha(409, 'Pedido já aceito ou encerrado');
+    if (!ent?.st_atv || ent.dt_exc || !ent.usuario.st_atv) throw new Falha(422, 'Entregador inativo');
+    if (!await tx.ab_aberturas_caixa.findFirst({ where: { id_ent: d.id_ent, id_cx: null, dt_ab: { lte: new Date() } } })) throw new Falha(409, 'Abra o caixa do entregador antes de atribuir entregas');
+    if (!['PRONTO','ATRIBUIDO'].includes(p.st_ped)) throw new Falha(409, 'Pedido já aceito ou encerrado');
     const alterado = await tx.ped_pedidos.updateMany({ where: { id_ped: d.id_ped, versao: d.versao }, data: { id_ent: d.id_ent, st_ped: 'ATRIBUIDO', versao: { increment: 1 } } });
     if (!alterado.count) throw new Falha(409, 'Pedido alterado por outro operador; atualize a tela');
     await tx.log_historico_pedidos.create({ data: { id_ped: p.id_ped, id_usr: ator.id_usr, acao: 'DESPACHO', dados_ant: { id_ent: p.id_ent }, dados_nov: { id_ent: d.id_ent } } });
@@ -80,7 +81,6 @@ export async function mudarStatus(ator: Ator, entrada: unknown) {
     if (!operador(ator.tp_usr) && (ator.tp_usr !== 'ENTREGADOR' || p.entregador?.id_usr !== ator.id_usr)) throw new Falha(403, 'Pedido não atribuído ao usuário');
     if (!proximos[p.st_ped].includes(d.st_ped)) throw new Falha(409, 'Transição de status inválida');
     if (d.st_ped === 'ATRIBUIDO') throw new Falha(422, 'Use o despacho para atribuir entregador');
-    if (p.st_ret && p.st_ped === 'EM_ENTREGA' && d.st_ped === 'CONCLUIDO') throw new Falha(422, 'Conclua também o retorno');
     if (!p.st_ret && d.st_ped === 'EM_RETORNO') throw new Falha(422, 'Pedido sem retorno');
     const concluido = d.st_ped === 'CONCLUIDO';
     if (concluido && p.st_pag === 'A_RECEBER' && !d.tp_rec) throw new Falha(422, 'Informe a forma de recebimento');

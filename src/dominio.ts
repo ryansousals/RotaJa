@@ -4,9 +4,9 @@ export class Falha extends Error {
 }
 export const operador = (tipo: string) => ['ADMINISTRADOR', 'OPERADOR'].includes(tipo);
 export const proximos: Record<st_pedido, st_pedido[]> = {
-  PREPARANDO: ['ATRIBUIDO', 'CANCELADO'], ATRIBUIDO: ['ACEITO', 'CANCELADO'],
-  ACEITO: ['EM_COLETA', 'CANCELADO'], EM_COLETA: ['NO_LOCAL', 'CANCELADO'],
-  NO_LOCAL: ['EM_ENTREGA', 'CANCELADO'], EM_ENTREGA: ['EM_RETORNO', 'CONCLUIDO'],
+  PRONTO: ['ATRIBUIDO', 'CANCELADO'], ATRIBUIDO: ['ACEITO', 'CANCELADO'],
+  ACEITO: ['EM_ENTREGA', 'CANCELADO'], EM_COLETA: ['EM_ENTREGA', 'CANCELADO'],
+  NO_LOCAL: ['EM_ENTREGA', 'CANCELADO'], EM_ENTREGA: ['CONCLUIDO'],
   EM_RETORNO: ['CONCLUIDO'], CONCLUIDO: [], CANCELADO: [],
 };
 export function calcularCaixa(pedidos: { vlr_ganho_ent: Prisma.Decimal; vlr_rec_din: Prisma.Decimal }[]) {

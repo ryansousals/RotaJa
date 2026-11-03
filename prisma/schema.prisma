@@ -30,7 +30,7 @@ enum st_pagamento {
 }
 
 enum st_pedido {
-  PREPARANDO
+  PRONTO
   ATRIBUIDO
   ACEITO
   EM_COLETA
@@ -100,6 +100,7 @@ model emp_empresas {
 }
 
 model ent_entregadores {
+  dt_exc DateTime? @banco.Timestamptz(3)
   id_ent   String                @id @default(uuid()) @banco.Uuid
   id_usr   String                @unique @banco.Uuid
   doc_cpf  String                @unique @banco.Char(11)
@@ -149,7 +150,7 @@ model ped_pedidos {
   end_loja      Json
   tp_end        tp_endereco
   st_pag        st_pagamento
-  st_ped        st_pedido               @default(PREPARANDO)
+  st_ped        st_pedido               @default(PRONTO)
   st_ret        Boolean                 @default(false)
   vlr_prod      Decimal                 @banco.Decimal(12, 2)
   vlr_tx        Decimal                 @banco.Decimal(12, 2)

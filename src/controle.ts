@@ -27,6 +27,22 @@ export function registrarControle(app: Express, io: Server) {
     if (!cfg.st_emp_lig) { io.to('empresas').emit('acesso:bloqueado', { mensagem: 'O sistema das empresas foi desligado pela administração.' }); io.in('empresas').disconnectSockets(true); }
     res.json(cfg);
   });
+  app.delete('/entregadores/:id', async (req,res) => {
+    if ((res.locals.ator as Ator).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente o administrador pode excluir entregadores');
+    const id_ent = z.string().uuid().parse(req.params.id);
+    const ent = await transacao(async tx => {
+      const e = await tx.ent_entregadores.findUniqueOrThrow({ where: { id_ent } });
+      if (await tx.ab_aberturas_caixa.count({where:{id_ent,id_cx:null}})) throw new Falha(409,'Não é possível excluir: o entregador possui caixa aberto');
+      if (await tx.cx_caixa_entregador.count({where:{id_ent,st_cx:{not:'QUITADO'}}})) throw new Falha(409,'Não é possível excluir: existem fechamentos financeiros pendentes');
+      if (await tx.ped_pedidos.count({where:{id_ent,OR:[{st_ped:{notIn:['CONCLUIDO','CANCELADO']}},{st_ped:'CONCLUIDO',id_cx:null}]}})) throw new Falha(409,'Não é possível excluir: existem entregas em andamento ou valores ainda não acertados');
+      await tx.ent_entregadores.update({where:{id_ent},data:{st_atv:false,dt_exc:e.dt_exc ?? new Date()}});
+      await tx.usr_usuarios.update({where:{id_usr:e.id_usr},data:{st_atv:false}});
+      return e;
+    });
+    io.to('usr:'+ent.id_usr).emit('acesso:bloqueado',{mensagem:'Cadastro de entregador excluído pela administração.'});
+    io.in('usr:'+ent.id_usr).disconnectSockets(true);
+    res.sendStatus(204);
+  });
   app.delete('/empresas/:id', async (req,res) => {
     if ((res.locals.ator as Ator).tp_usr !== 'ADMINISTRADOR') throw new Falha(403, 'Somente o administrador pode excluir empresas');
     const id_emp = z.string().uuid().parse(req.params.id);

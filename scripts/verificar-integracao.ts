@@ -55,6 +55,7 @@ await chamar(rotaTaxa, admin.token, { vlr_tx_ent: '7', vlr_tx_ret: '3' }, 'PUT')
 assert.equal((await chamar('/pedidos/' + inclusivo.id_ped, cliente.token)).vlr_tx, '9');
 for (const p of [pago, inclusivo]) await chamar('/pedidos/status', admin.token, { id_ped: p.id_ped, versao: p.versao, st_ped: 'CANCELADO' });
 const inicio = new Date().toISOString();
+const abertura = await chamar('/caixa-diario/abrir',admin.token,{id_ent:ent.id_ent,dt_ab:inicio,vlr_ab:'0'});
 let pedido = await chamar('/pedidos', cliente.token, dados);
 assert.equal(pedido.vlr_cobrar, '100');
 assert.equal((await chamar('/pedidos', cliente.token, dados)).id_ped, pedido.id_ped);
@@ -64,7 +65,7 @@ const socket = io(api, { auth: { token: admin.token }, transports: ['websocket']
 try {
   await new Promise<void>((resolve, reject) => { const limite = setTimeout(() => reject(Error('Tempo excedido ao conectar socket')), 10000); socket.once('connect', () => { clearTimeout(limite); resolve(); }); socket.once('connect_error', e => { clearTimeout(limite); reject(e); }); });
   pedido = await new Promise<Registro>((resolve, reject) => socket.timeout(10000).emit('pedido:despachar', { id_ped: pedido.id_ped, id_ent: ent.id_ent, versao: pedido.versao }, (erro: unknown, r: Registro) => { if (erro || !r?.ok) reject(Error(r?.mensagem ?? 'Falha no despacho')); else resolve(r.pedido); }));
-  for (const st_ped of ['ACEITO','EM_COLETA','NO_LOCAL','EM_ENTREGA','CONCLUIDO']) {
+  for (const st_ped of ['ACEITO','EM_ENTREGA','CONCLUIDO']) {
     pedido = await chamar('/pedidos/status', entregador.token, { id_ped: pedido.id_ped, versao: pedido.versao, st_ped, ...(st_ped === 'CONCLUIDO' ? { tp_rec: 'DINHEIRO' } : {}) });
   }
   const consultarPortal = (token = cliente.token) => chamar('/portal/resumo?' + new URLSearchParams({ inicio, fim: new Date(Date.now()+60000).toISOString() }), token);
@@ -76,9 +77,10 @@ try {
   const tentarEscopo = await fetch(api + '/portal/resumo?' + new URLSearchParams({ inicio, fim: new Date().toISOString(), id_emp: segunda.id_emp }), { headers: { Authorization: `Bearer ${cliente.token}` } });
   assert.equal(tentarEscopo.status, 422);
   const periodo = { dt_ini: inicio, dt_fim: new Date().toISOString() };
-  const caixa = await chamar('/caixas/fechar', entregador.token, { id_ent: ent.id_ent, ...periodo });
+  const fechamento = {dt_fim:periodo.dt_fim,informado:{dinheiro:'100',pix:'0',cartao:'0',online:'0'},parcial:'0',outros:'0',pos_meia_noite:'0',observacoes:''};
+  const caixa = await chamar(`/caixa-diario/${abertura.id_ab}/fechar`, entregador.token, fechamento);
   assert.equal(caixa.vlr_saldo_rep_adm, '93');
-  assert.equal((await chamar('/caixas/fechar', entregador.token, { id_ent: ent.id_ent, ...periodo })).id_cx, caixa.id_cx);
+  assert.equal((await chamar(`/caixa-diario/${abertura.id_ab}/fechar`, entregador.token, fechamento)).id_cx, caixa.id_cx);
   await chamar(`/caixas/${caixa.id_cx}/quitar`, admin.token, { ref_comprovante: `teste-integrado-${sufixo}` });
   const repasse = await chamar('/repasses', admin.token, { id_emp: empresa.id_emp, ...periodo });
   assert.equal(repasse.vlr_rep, '93');
