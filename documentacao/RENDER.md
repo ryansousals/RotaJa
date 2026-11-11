@@ -10,9 +10,10 @@ Crie sua conta em https://console.neon.tech/signup e um projeto Free chamado Rot
 
 Crie a conta em https://dashboard.render.com/register com GitHub. Autorize acesso ao repositório `ryansousals/RotaJa`. Use New > Blueprint, selecione o repositório e o arquivo `render.yaml` na branch main.
 
-Preencha os três campos solicitados:
+Preencha os quatro campos solicitados:
 
-- DATABASE_URL: URL secreta do banco Neon.
+- DATABASE_URL: URL secreta com pooling do banco Neon, usada pela aplicação.
+- DATABASE_URL_UNPOOLED: URL direta, sem pooling, usada nas migrações e no cadastro inicial.
 - ADMIN_EMAIL: e-mail que usará no login do RotaJá.
 - ADMIN_SENHA: senha única com pelo menos 16 caracteres.
 
