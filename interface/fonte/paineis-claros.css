@@ -1,0 +1,108 @@
+/* Superfícies de trabalho claras. Marca, navegação e acesso mantêm sua identidade. */
+.principal { background: #edf2f7; min-height: 100vh; }
+.conteudo {
+  color-scheme: light;
+  color: #26374d;
+  --cartao: #f8fafc;
+  --borda: #d8e1ec;
+  --muted: #5c6e85;
+}
+.conteudo ::selection { color: #102a50; background: #cfe0ff; }
+.conteudo :is(h1,h2,h3) { color: #1c304b; }
+.conteudo .sobretitulo { color: #41658e; }
+.conteudo :is(.pagina-titulo p,.secao-cab p,.metrica small,.celula-detalhe,.data-celula,.nota-painel,.rodape,.nota-relatorio,.carregando) { color: #5c6e85; }
+.conteudo .cartao { box-shadow: 0 2px 8px #16304f06; }
+.conteudo :is(.secao-cab,.tabela-filtros,.tabela-rodape) { border-color: var(--borda); }
+.conteudo .secao-cab h2 { color: #243852; font-size: 15px; }
+.conteudo .contador { color: #345784; background: #e9f0fa; border-color: #cfdbec; }
+.conteudo .tabela-rodape { color: #5c6e85; background: #f3f6fa; }
+.conteudo th { background: #eaf0f7; color: #415875; border-color: #d5dfec; font-size: 10px; padding-top: 15px; padding-bottom: 15px; }
+.conteudo td { color: #344760; border-color: #e0e7ef; font-size: 12px; }
+.conteudo tbody tr:nth-child(even) { background: #f1f5f9; }
+.conteudo tbody tr:hover { background: #e8f0fc; }
+.conteudo td strong { color: #213751; font-size: 12px; }
+.conteudo .empresa-celula { color: #344760; font-size: 11px; }
+.conteudo .id-pedido { color: #255eb4; font-size: 12px; }
+.conteudo .celula-detalhe { font-size: 10px; }
+.conteudo .data-celula { font-size: 11px; }
+.conteudo .badge { font-size: 10px; padding: 6px 8px; border-color: #00000008; }
+.conteudo .azul { color: #2455a0; background: #e5edff; }
+.conteudo .verde { color: #176344; background: #dff3e9; }
+.conteudo .ambar { color: #80520a; background: #fff0cc; }
+.conteudo .violeta { color: #6941ad; background: #eee7fb; }
+.conteudo .badge.vermelho { color: #a3263c; background: #fbe5e9; }
+.conteudo .badge.neutro { color: #52647b; background: #e7edf4; }
+.conteudo .tempo { color: #506886; background: #eaf0f7; border-color: #d4dfeb; }
+.conteudo .tempo.atrasado { color: #a3263c; background: #fbe5e9; border-color: #efc6cf; }
+.conteudo .tempo.espera { color: #80520a; background: #fff0cc; border-color: #ebd69d; }
+.conteudo .sinal-vivo { color: #207450; }
+.conteudo .btn:not(.primario):not(.perigo) { background: #f8fafc; border-color: #c6d3e3; color: #344e70; }
+.conteudo .btn:not(.primario):not(.perigo):hover:not(:disabled) { background: #e7effb; border-color: #94b1da; }
+.conteudo .btn.perigo { background: #fff0f2; border-color: #e8bcc5; color: #a3263c; }
+.conteudo .btn.perigo:hover:not(:disabled) { background: #fbe2e7; }
+.conteudo .icone { color: #526d90; }
+.conteudo .icone:hover:not(:disabled) { color: #2455a0; background: #e2ecfa; }
+.conteudo .abas button { color: #536882; }
+.conteudo .abas button:hover { background: #eaf0f8; }
+.conteudo .abas :is(.ativa,[aria-selected=true]) { color: #2455a0; background: #e0eaff; box-shadow: inset 0 -2px #4585ff; }
+.conteudo .abas span { color: #345784; background: #d5e2f6; }
+.conteudo :is(.pesquisa,.select-filtro,.despacho) { color: #344e70; background: #fbfcfe; border-color: #c5d2e2; }
+.conteudo :is(.pesquisa input,.select-filtro select) { color: #263d5c; font-size: 12px; }
+.conteudo .pesquisa:focus-within { border-color: #4585ff; box-shadow: 0 0 0 3px #4585ff12; }
+.conteudo input::placeholder,.conteudo textarea::placeholder { color: #677d97; }
+.conteudo .despacho { font-size: 11px; }
+.conteudo .despacho.sem-entregador { color: #49658a; }
+.conteudo :is(select option,input,textarea) { color-scheme: light; }
+.conteudo :is(.metrica>div>span:first-child,.metrica small) { color: #5b6f88; }
+.conteudo .metrica>strong { color: #203852; }
+.conteudo :is(.cadastro-resumo,.periodo-bar,.formula-caixa,.totais-caixa,.trajeto,.financeiro-pedido,.corrida-card) { background: #f8fafc; color: #26374d; border-color: var(--borda); }
+.conteudo .cadastro-resumo strong { color: #243b5a; }
+.conteudo :is(.cadastro-resumo small,.cadastro-resumo>svg,.cadastro-resumo>span:last-child,.formula-caixa,.periodo-bar label,.periodo-bar>span) { color: #58708e; }
+.conteudo .resumo-icone { background: #e2ebfc; color: #386abd; }
+.conteudo .placa { color: #344760; background: #eaf0f7; border-color: #c6d3e3; }
+.conteudo :is(.formula-caixa strong,.info-bloco strong,.info-bloco a) { color: #29466c; }
+.conteudo .aviso { color: #365d89; background: #eaf2fd; border-color: #c8d9ef; }
+.conteudo .aviso.erro { color: #a3263c; background: #fff0f2; border-color: #ebc4cd; }
+.conteudo .vazio { color: #61768f; }
+.conteudo .vazio h3 { color: #344e70; }
+.conteudo .rodape { border-color: var(--borda); }
+.conteudo .campo>span { color: #3a506e; font-size: 12px; }
+.conteudo :is(.campo input,.campo select,.campo textarea,.periodo-bar input,.periodo-bar select) { background: #fbfcfe; color: #243b5a; border-color: #c5d2e2; }
+.conteudo :is(.campo input,.campo select,.campo textarea):focus { border-color: #4585ff; box-shadow: 0 0 0 3px #4585ff14; }
+.conteudo :is(.form-secao,.form-rodape,.detalhe-acoes) { color: #3d6391; border-color: #d5dfeb; }
+.conteudo .form-rodape>span { color: #61768f; }
+.conteudo .modal { color-scheme: light; background: #f8fafc; color: #344760; border-color: #c5d2e2; box-shadow: 0 24px 80px #10284640; }
+.conteudo .modal-cab { background: #eef3f9; border-color: #d5dfeb; }
+.conteudo .modal-cab h2 { color: #213751; }
+.conteudo .modal-cab p { color: #58708e; }
+.conteudo .modal::backdrop { background: #0b182866; backdrop-filter: blur(3px); }
+.conteudo .orcamento { color: #294f81; background: #eaf2fd; border-color: #c4d8f3; }
+.conteudo .orcamento>strong { color: #2455a0; }
+.conteudo :is(.orcamento small,.etiqueta-neutra,.trajeto p,.trajeto small,.info-bloco small) { color: #5b7392; }
+.conteudo .trajeto strong { color: #243b5a; }
+.conteudo .trajeto>div:first-child:after { background: #b9cbe1; }
+.conteudo .financeiro-pedido h3 { border-color: #d5dfeb; }
+.conteudo .financeiro-pedido>div>span { color: #526b8b; }
+.conteudo .financeiro-pedido strong { color: #243b5a; }
+.conteudo .financeiro-pedido .cobrar { background: #fcecef; color: #964052; }
+.conteudo .financeiro-pedido .cobrar strong { color: #a3263c; }
+.conteudo .financeiro-pedido .recebido { background: #e3f3eb; color: #176344; }
+.conteudo .financeiro-pedido .recebido strong { color: #176344; }
+.conteudo .rastreio { background: #eaf5f3; border-color: #c8e2dc; }
+.conteudo .rastreio strong { color: #2e665e; }
+.conteudo .rastreio small { color: #56796f; }
+.conteudo .historico-item strong { color: #3a5577; }
+.conteudo :is(.historico-item small,.historico-item details) { color: #61768f; }
+.conteudo .historico-item:before { background: #d5dfeb; }
+.conteudo .historico pre { background: #eaf0f7; color: #344760; }
+.conteudo :is(.corrida-card h3,.ajuda-card h2) { color: #243b5a; }
+.conteudo :is(.corrida-card p,.corrida-dados,.ajuda-card p) { color: #58708e; }
+.conteudo .corrida-dados b { color: #176344; }
+.conteudo .portal-saldo { background: #f3f7fc; border-color: #cddcef; }
+.conteudo .portal-valor { color: #157453; }
+.conteudo :is(.portal-saldo p,.portal-saldo-detalhes>span,.portal-conferencia p,.portal-conferencia small,.portal-conferencia dt,.controle-sistema p) { color: #58708e; }
+.conteudo .portal-saldo-detalhes>span { border-color: #d5dfeb; }
+.conteudo :is(.portal-saldo-detalhes b,.portal-conferencia dd) { color: #243b5a; }
+.conteudo .portal-saldo-detalhes a { color: #255eb4; }
+.conteudo .conferencia-forma h3 { color: #fff; }
+.conteudo .valor-negativo { color: #b4233e!important; }
