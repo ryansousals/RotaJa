@@ -1,6 +1,6 @@
 # RotaJá · Central de entregas
 
-Projeto integrado: React + TypeScript + Tailwind, Express, PostgreSQL/Prisma, Redis e Socket.IO. Interface em português para operação, cliente e entregador.
+Projeto integrado: React + JavaScript + Tailwind, Express, PostgreSQL/Prisma, Redis e Socket.IO. Interface em português para operação, cliente e entregador.
 
 ## Rodar localmente
 
@@ -22,17 +22,23 @@ docker compose up -d --wait
 
 Os volumes preservam os dados. Não exclua os volumes para atualizar o código. Editar senhas no .env não altera automaticamente senhas de bancos e usuários já existentes.
 
+## Publicar na internet
+
+Veja [o guia de publicação](documentacao/PUBLICACAO.md). A configuração independente `compose.producao.yml` inclui HTTPS automático, rede privada para banco/cache/API, cookies seguros e backup. Exige um servidor Linux com Docker e um domínio ou subdomínio apontado para ele. Não use o compose local para expor o sistema na internet.
+
+Ensaio local isolado da configuração de produção: `node rotinas/verificar-publicacao.js` (requer Docker e dependências Node). Usa a porta local 18443 e banco descartável; não altera os dados da instalação local.
+
 ## Recursos
 
 - **Operação:** indicadores, busca, filtros, paginação, despacho inline, detalhes e auditoria, edição justificada, cancelamento e status, abertura em nome da loja, cadastros de empresas/entregadores/bairros/usuários, tarifas, ativação, caixa, repasses, conferência e CSV.
 - **Cliente:** abertura de chamados, bairro permitido, coleta ou entrega, retorno, pago/a receber, acompanhamento dos próprios pedidos e consulta de repasses.
-- **Entregador:** interface responsiva, aceite, coleta, chegada, entrega, retorno, recebimento, localização com a página aberta, consulta e fechamento do próprio caixa.
+- **Entregador:** interface responsiva, aceite, recolhimento, finalização, recebimento, localização com a página aberta, consulta e fechamento do próprio caixa.
 
 Empresa e entregador são cadastrados junto com o usuário em uma transação. O menu Ajuda explica o ciclo. Somente a loja abre chamadas, usando seu próprio acesso. Não há auto-cadastro público.
 
 ## Financeiro
 
-A_RECEBER recebe o total a recolher, já incluindo a taxa (sem somá-la novamente), e a forma de pagamento prevista. PAGO não solicita valor de produtos ou cobrança: mostra somente a taxa. Ganho do entregador difere da taxa comercial. Na conclusão, a forma de recebimento distingue dinheiro em custódia de pagamento direto à loja.
+A_RECEBER recebe o total a recolher, já incluindo a taxa (sem somá-la novamente), e a forma de pagamento prevista. PAGO não solicita valor de produtos ou cobrança: mostra somente a taxa. O ganho do entregador é configurável separadamente; nos novos bairros oficiais, começa igual à taxa base. Na conclusão, a forma de recebimento distingue dinheiro em custódia de pagamento direto à loja.
 
 **Caixa = dinheiro recebido − ganhos de frete.** R$ 1.000 − R$ 70 = R$ 930 para o ADM. Saldo negativo indica crédito do entregador. Repasse à loja desconta os fretes do período e considera dinheiro recebido pela central. Quitação é conferência contábil, sem transferência bancária.
 
@@ -43,12 +49,12 @@ Instale Node.js 22+ para editar e testar:
 ```powershell
 npm ci
 npm run db:gerar
-npm --prefix web ci
+npm --prefix interface ci
 npm run build
 npm test
 npm run build:web
 npm run test:integracao
-npm --prefix web exec playwright install chromium
+npm --prefix interface exec playwright install chromium
 npm run test:e2e
 ```
 
@@ -58,26 +64,26 @@ Para atualização automática, mantenha banco/cache ativos e pare os contêiner
 
 ## Estrutura
 
-- src/: API e regras de negócio.
+- servidor/: API e regras de negócio.
 - prisma/: schema em português, migrações e seed.
-- web/src/: aplicação React integrada.
-- web/tests/: testes desktop e mobile.
-- web/nginx.conf: proxy HTTP/WebSocket.
-- scripts/: inicialização e testes da API.
-- exemplos/mobile/: integração Expo de referência.
-- docs/: arquitetura, contratos e validação.
+- interface/fonte/: aplicação React integrada.
+- interface/testes/: testes desktop e mobile.
+- interface/nginx.conf: proxy HTTP/WebSocket.
+- rotinas/: inicialização e testes da API.
+- exemplos/celular/: integração Expo de referência.
+- documentacao/: arquitetura, contratos e validação.
 
 ## Limites
 
 O frontend entregue é web responsivo para os três perfis. A integração Expo permanece como referência; não há APK/IPA homologado. GPS web exige permissão e funciona enquanto o detalhe da corrida estiver aberto. Posições expiram após dois minutos. O mapa OpenStreetMap exige internet e só carrega ao clicar em Ver no mapa.
 
-Não há transferência bancária, conferência automática de PIX, estornos, recuperação de senha ou push nativo. Pedidos encerrados não são reescritos. Publicação externa exige TLS, segredos gerenciados, backups, monitoramento e as demais medidas descritas em docs/ARQUITETURA.md.
+Não há transferência bancária, conferência automática de PIX, estornos, recuperação de senha ou push nativo. Pedidos encerrados não são reescritos. Publicação externa exige TLS, segredos gerenciados, backups, monitoramento e as demais medidas descritas em documentacao/ARQUITETURA.md.
 
-Referências: [Vite](https://vite.dev/guide/), [Tailwind](https://tailwindcss.com/docs/installation/using-vite), [Socket.IO](https://socket.io/docs/v4/redis-adapter), [Prisma 6](https://www.prisma.io/docs/orm/v6/overview/databases/postgresql).
+Referências: [Vite](https://vite.dev/guide/), [Tailwind](https://tailwindcss.com/documentacao/installation/using-vite), [Socket.IO](https://socket.io/documentacao/v4/redis-adapter), [Prisma 6](https://www.prisma.io/documentacao/orm/v6/overview/databases/postgresql).
 
 ## Taxas por loja e cobrança inclusiva
 
-Em **Empresas parceiras → Taxas por bairro**, o administrador escolhe o bairro e salva a taxa de entrega e o adicional de retorno exclusivos da loja. Todos os bairros ativos continuam disponíveis para todas as lojas. Sem personalização, vale a taxa padrão do bairro. Alterar o padrão afeta somente próximas chamadas de lojas sem personalização; alterar uma tarifa da loja não modifica pedidos existentes. Os ganhos do entregador continuam definidos no cadastro do bairro.
+Em **Empresas parceiras → Taxas por bairro**, o administrador escolhe o bairro e salva a taxa de entrega exclusiva da loja; com retorno, o sistema dobra essa taxa. Todos os bairros ativos continuam disponíveis para todas as lojas. Sem personalização, vale a taxa padrão do bairro. Alterar o padrão afeta somente próximas chamadas de lojas sem personalização; alterar uma tarifa da loja não modifica pedidos existentes. Os ganhos do entregador continuam definidos no cadastro do bairro.
 
 Na abertura, somente a loja autenticada pode criar o pedido. **Pago** mostra a taxa, sem campo de valor. **A receber** solicita forma de pagamento e o total a recolher, incluindo a taxa; a taxa aparece separada para conferência. Exemplo: total R$ 100 e taxa R$ 7 resultam em cobrança de R$ 100 e produto calculado de R$ 93. A forma prevista é confirmada pelo entregador na conclusão.
 
@@ -127,7 +133,7 @@ Salvar cria um fechamento pendente com cópia imutável dos valores, observaçõ
 
 O botão **Sair** no topo revoga a sessão no Redis, remove o cookie HttpOnly e desconecta os canais de tempo real. Não há token persistido no armazenamento do navegador.
 
-Validação adicional: `npx tsx scripts/verificar-relatorios.ts` e `npm --prefix web run test:e2e -- relatorios.spec.ts`. Os testes criam cadastros e movimentações fictícias identificadas como teste no banco local.
+Validação adicional: `node rotinas/verificar-relatorios.js` e `npm --prefix interface run test:e2e -- relatorios.spec.js`. Os testes criam cadastros e movimentações fictícias identificadas como teste no banco local.
 
 ## Registro de Caixa — 03/11/2026
 
@@ -147,3 +153,10 @@ Fech. Geral mostra a movimentação do dia e os totais por forma de pagamento. O
 Novos chamados entram como PRONTO. O despacho exige entregador ativo com abertura de caixa vigente (id_cx nulo), inclusive em turnos que atravessam a meia-noite. Após atribuir: Aceitar → A recolher; Recolhido → Enviando; Finalizar Entrega → Concluído. Corridas com retorno são finalizadas após completar também o retorno, na mesma ação. Estados intermediários antigos continuam legíveis, mas não são novas etapas.
 
 GET /entregadores?caixa_aberto=true alimenta as seleções de despacho e repasse. Consultas financeiras mantêm os registros históricos. DELETE /entregadores/:id é exclusivo do administrador: bloqueia caixa aberto, caixa não quitado, corrida ativa e corrida concluída sem acerto. A exclusão é lógica: preserva CPF, e-mail, pedidos e finanças; desativa o acesso e desconecta a sessão. Não permite reativação pelo cadastro de usuários.
+
+## JavaScript e catálogo oficial (08/11/2026)
+API em JavaScript ES Modules, executada diretamente pelo Node.js. React/Tailwind em JavaScript e JSX, sem compilador TypeScript. Pastas: servidor, interface/fonte, interface/testes, interface/publico, rotinas, testes, documentacao e exemplos/celular. Nomes reservados de bibliotecas, package.json, Dockerfile e arquivos gerenciados pelo Prisma são preservados.
+
+O populador prisma/popular.js aplica o catálogo de 59 bairros da operação Floriano/PI uma única vez, controlado por cfg_cargas. Em bairros existentes, atualiza a taxa base informada, preservando ganhos já definidos, tarifas específicas de lojas e pedidos. Não restaura bairros excluídos. Bairros novos têm ganho igual à taxa; Princesa do Sul e Vila Leal ficam sob consulta, sem aceitar chamados até definição administrativa da taxa e do ganho. O nome Barão - Nossa Senhora da Guia pertence ao grupo de R$ 9,00 conforme a lista enviada. Reiniciar ou executar novamente npm run banco:popular não sobrescreve alterações posteriores.
+
+Com Retorno? inicia desligado. Ao ligar, taxa e ganho são multiplicados por dois. A taxa da loja prevalece sobre a taxa base. Os campos antigos vlr_tx_ret/vlr_ganho_ret permanecem para compatibilidade histórica, mas não determinam mais o cálculo de novos chamados.

@@ -7,7 +7,7 @@ flowchart LR
   ADM[React Operação] --> PROXY[Nginx / Vite]
   CLI[React Remetente] --> PROXY
   ENT[React Entregador responsivo] --> PROXY
-  PROXY --> API[API Express TypeScript]
+  PROXY --> API[API Express JavaScript]
   ADM <--> WS[Socket.IO]
   CLI <--> WS
   ENT <--> WS
@@ -19,7 +19,7 @@ flowchart LR
 
 Monólito modular inicialmente: cadastros, autenticação, pedidos, despacho, rastreamento e financeiro. HTTP e socket compartilham os mesmos serviços e autorização. A divisão em serviços independentes só se justifica por demanda medida; banco e transações preservam a consistência financeira.
 
-Estrutura atual: `src/dominio.ts` contém regras puras, `src/servicos.ts` transações e validações, `src/servidor.ts` transporte e autenticação e `src/painel.ts` consultas e cadastros integrados. `web/` é uma aplicação React/Vite/Tailwind com navegação e recursos conforme o perfil. Nginx entrega os arquivos compilados e encaminha API e WebSocket na mesma origem. React com Vite foi escolhido para o painel privado, que não depende de renderização no servidor. O caminho de execução local é `iniciar.bat`, com Docker Compose incluindo migração e seed. `exemplos/` preserva referências da primeira versão; o frontend executável está em `web/src/`.
+Estrutura atual: `servidor/dominio.js` contém regras puras, `servidor/servicos.js` transações e validações, `servidor/servidor.js` transporte e autenticação e `servidor/painel.js` consultas e cadastros integrados. `interface/` é uma aplicação React/Vite/Tailwind com navegação e recursos conforme o perfil. Nginx entrega os arquivos compilados e encaminha API e WebSocket na mesma origem. React com Vite foi escolhido para o painel privado, que não depende de renderização no servidor. O caminho de execução local é `iniciar.bat`, com Docker Compose incluindo migração e seed. `exemplos/` preserva referências da primeira versão; o frontend executável está em `interface/fonte/`.
 
 ## Dados e contas
 

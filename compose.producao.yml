@@ -1,0 +1,93 @@
+# Arquivo independente: não combinar com o compose local.
+name: rotaja-producao
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?configure .env.producao}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?configure .env.producao}
+      POSTGRES_DB: ${POSTGRES_DB:?configure .env.producao}
+    volumes: [dados_pg:/var/lib/postgresql/data]
+    networks: [dados]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  cache:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes']
+    volumes: [dados_redis:/data]
+    networks: [dados]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migracao:
+    build: {context: ., target: migracao}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    networks: [dados]
+    depends_on:
+      db: {condition: service_healthy}
+  seed:
+    build: {context: ., target: migracao}
+    command: [node, prisma/popular.js]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?configure .env.producao}
+      ADMIN_SENHA: ${ADMIN_SENHA:?configure .env.producao}
+    networks: [dados]
+    depends_on:
+      migracao: {condition: service_completed_successfully}
+  api:
+    build: {context: ., target: producao}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://cache:6379
+      WEB_ORIGINS: https://${DOMINIO:?configure .env.producao}
+      COOKIE_SEGURO: 'true'
+      PROXY_CONFIAVEL: 'true'
+      PORT: 3001
+    networks: [dados, aplicacao]
+    healthcheck:
+      test: [CMD, node, -e, 'fetch("http://127.0.0.1:3001/saude").then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      cache: {condition: service_healthy}
+      seed: {condition: service_completed_successfully}
+  web:
+    build: ./interface
+    restart: unless-stopped
+    networks: [aplicacao]
+    depends_on:
+      api: {condition: service_healthy}
+  entrada:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?configure .env.producao}
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes:
+      - ./infraestrutura/Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificados:/data
+      - configuracao_caddy:/config
+    networks: [publica, aplicacao]
+    depends_on: [web]
+networks:
+  publica:
+  aplicacao:
+    internal: true
+  dados:
+    internal: true
+volumes:
+  dados_pg:
+  dados_redis:
+  certificados:
+  configuracao_caddy:

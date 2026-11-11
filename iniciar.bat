@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\iniciar-local.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0rotinas\iniciar-local.ps1"
 if errorlevel 1 (
   echo.
   echo Nao foi possivel iniciar. Confira a mensagem acima.

@@ -14,3 +14,6 @@ backups/
 test-results/
 playwright-report/
 entrega/
+
+publicacao/
+resultados-testes/

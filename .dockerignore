@@ -5,5 +5,7 @@ dist
 .env.*
 coverage
 apps
-web
+interface
 entrega
+backups
+*.pem

@@ -5,21 +5,18 @@ COPY package*.json ./
 RUN npm ci
 COPY prisma ./prisma
 RUN npx prisma generate
-FROM dependencias AS compilacao
-COPY tsconfig.json ./
-COPY src ./src
-RUN npm run build
-FROM compilacao AS migracao
+COPY servidor ./servidor
+FROM dependencias AS migracao
 CMD ["npx", "prisma", "migrate", "deploy"]
-FROM compilacao AS dependencias_producao
+FROM dependencias AS dependencias_producao
 RUN npm prune --omit=dev --ignore-scripts --no-audit --no-fund
 FROM node:22-bookworm-slim AS producao
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 COPY --from=dependencias_producao /app/node_modules ./node_modules
-COPY --from=compilacao /app/dist ./dist
+COPY --from=dependencias /app/servidor ./servidor
 COPY package.json ./
 USER node
 EXPOSE 3001
-CMD ["node", "dist/servidor.js"]
+CMD ["node", "servidor/servidor.js"]

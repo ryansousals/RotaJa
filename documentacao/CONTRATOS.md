@@ -37,9 +37,9 @@ Entregador: alvos de toque grandes, contraste, ações sequenciais. Mostrar os d
 
 ## Usar os exemplos
 
-A aplicação web integrada está em `web/`. Execute `iniciar.bat` para usar em http://localhost:3002. Os componentes de `exemplos/web` são referências da primeira versão e não fazem parte da aplicação atual.
+A aplicação web integrada está em `interface/`. Execute `iniciar.bat` para usar em http://localhost:3002. Os componentes de `exemplos/web` são referências da primeira versão e não fazem parte da aplicação atual.
 
-Crie um aplicativo Expo TypeScript e instale `expo-location`, `expo-task-manager` e `expo-secure-store`. Copie o config e os módulos de `exemplos/mobile`. Grave token de login em SecureStore. Importe rastreamento no ponto de entrada, inicie após aceite e pare na conclusão, cancelamento ou logout. Use URL HTTPS acessível pelo aparelho; localhost do telefone não aponta para o computador. O componente `AcaoCorrida` recebe forma de recebimento selecionada pela tela pai e reconsulta o pedido em `atualizar`.
+Crie um aplicativo Expo JavaScript e instale `expo-location`, `expo-task-manager` e `expo-secure-store`. Copie o config e os módulos de `exemplos/celular`. Grave token de login em SecureStore. Importe rastreamento no ponto de entrada, inicie após aceite e pare na conclusão, cancelamento ou logout. Use URL HTTPS acessível pelo aparelho; localhost do telefone não aponta para o computador. O componente `AcaoCorrida` recebe forma de recebimento selecionada pela tela pai e reconsulta o pedido em `atualizar`.
 
 ## Contratos do frontend integrado
 
@@ -80,7 +80,7 @@ Frontend: `/empresa` abre o acesso de parceiros; o perfil REMETENTE inicia em `#
 - Todo acesso autenticado REMETENTE verifica o estado da empresa e a pausa geral. Estado bloqueado retorna 423; usuário desativado retorna 401. Conexões Socket.IO também validam o estado; `acesso:bloqueado` avisa o navegador antes da desconexão.
 - Na abertura de pedido, o estado geral é novamente verificado dentro da transação. Listagem de empresas exclui `dt_exc != null`; edição comum não alcança excluídas.
 
-Validação específica: `npx tsx scripts/verificar-controle.ts`. Executar apenas em ambiente de teste/local: cria uma empresa fictícia, pausa o acesso geral brevemente e restaura o estado anterior em `finally`. A empresa fictícia é excluída logicamente ao finalizar. Testes web de controle também restauram o estado anterior.
+Validação específica: `node rotinas/verificar-controle.js`. Executar apenas em ambiente de teste/local: cria uma empresa fictícia, pausa o acesso geral brevemente e restaura o estado anterior em `finally`. A empresa fictícia é excluída logicamente ao finalizar. Testes web de controle também restauram o estado anterior.
 
 ## Novos contratos: relatórios e caixa diário
 

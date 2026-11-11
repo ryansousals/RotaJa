@@ -5,7 +5,7 @@ Ambiente iniciado via Docker Compose no Windows, com API Node, PostgreSQL 17 e R
 - API: `http://localhost:3001/saude`.
 - PostgreSQL: `127.0.0.1:55432` (5432 estava ocupada por outro serviço).
 - Redis: `127.0.0.1:6379`.
-- Compilação TypeScript aprovada e quatro testes unitários aprovados.
+- Compilação JavaScript aprovada e quatro testes unitários aprovados.
 - Teste integrado aprovado com banco e Redis reais: login, cadastro de empresa/entregador/bairro, pedido idempotente, rejeição de bairro inexistente, despacho por Socket.IO, avanço da corrida, conclusão com dinheiro, fechamento e quitação de caixa, repasse e quitação, histórico e logout.
 - Pedido sintético #1 preservado para inspeção. Produto R$ 93, frete e ganho R$ 7, cobrança R$ 100, saldo do caixa R$ 93 e repasse à loja R$ 93.
 
@@ -33,7 +33,7 @@ A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/
 ### Ajuste: tarifas por empresa e cobrança total
 
 - Compilações da API e web aprovadas; 4 testes unitários aprovados.
-- Teste integrado aprovado: duas lojas veem o mesmo bairro com preços efetivos diferentes; alteração de tarifas por loja e operador é negada; ADM não abre chamadas; pedidos pagos não aceitam cobrança; retorno usa adicional da loja; total abaixo da taxa é rejeitado; mudança de tarifa preserva o pedido anterior.
+- Teste integrado aprovado: duas lojas veem o mesmo bairro com preços efetivos diferentes; alteração de tarifas por loja e operador é negada; ADM não abre chamadas; pedidos pagos não aceitam cobrança; retorno dobra a taxa efetiva da loja; total abaixo da taxa é rejeitado; mudança de tarifa preserva o pedido anterior.
 - 3 testes de navegador aprovados: administrador salva taxa específica de R$ 9, loja vê essa taxa em ambos os modos de pagamento, total de R$ 100 não recebe acréscimo, entregador conclui, caixa permanece R$ 93 (ganho do motoboy R$ 7) e repasse à loja é R$ 91 (taxa comercial R$ 9).
 - Capturas dos formulários Pago e A receber inspecionadas. Teste mobile usa preferência por animações reduzidas para estabilizar a interação com o menu lateral.
 - Migração aplicada pelo Docker sem recriar volumes. Serviços locais continuam ativos em localhost:3002.
@@ -65,6 +65,6 @@ A auditoria identificou alertas transitivos na cadeia do Prisma CLI 6 (`@prisma/
 - Captura da tabela de pendentes inspecionada. Menu lateral recebeu rolagem para preservar acesso em janelas baixas.
 - Execuções criam registros fictícios identificados como teste; o teste de caixa geral não persiste dados.
 
-03/11/2026 — fluxo simplificado: testes de domínio cobrem a sequência obrigatória e compatibilidade dos estados antigos. verificar-relatorios.ts também verifica PRONTO inicial, lista com caixa aberto, despacho recusado após fechar, exclusão recusada antes do acerto e bloqueio de acesso após excluir. O teste visual de relatórios confirma a modal e a retirada do cadastro da lista.
+03/11/2026 — fluxo simplificado: testes de domínio cobrem a sequência obrigatória e compatibilidade dos estados antigos. verificar-relatorios.js também verifica PRONTO inicial, lista com caixa aberto, despacho recusado após fechar, exclusão recusada antes do acerto e bloqueio de acesso após excluir. O teste visual de relatórios confirma a modal e a retirada do cadastro da lista.
 
-Tela Usuários: compilação API/web e 10 testes unitários aprovados. Teste de navegador usuarios.spec.ts aprovado: quatro abas, cadastro administrativo e cliente, busca, edição, rejeição de e-mail duplicado e mudança de perfil, autodesativação bloqueada, sessão revogada mesmo após reativar, abertura dos formulários de parceiros e layout móvel.
+Tela Usuários: compilação API/web e 10 testes unitários aprovados. Teste de navegador usuarios.spec.js aprovado: quatro abas, cadastro administrativo e cliente, busca, edição, rejeição de e-mail duplicado e mudança de perfil, autodesativação bloqueada, sessão revogada mesmo após reativar, abertura dos formulários de parceiros e layout móvel.
