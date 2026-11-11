@@ -1,0 +1,2 @@
+ALTER TABLE "bai_bairros" ADD COLUMN "st_sob_consulta" BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE "cfg_cargas" ("id_carga" TEXT PRIMARY KEY, "dt_cad" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);

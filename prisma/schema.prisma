@@ -114,6 +114,7 @@ model ent_entregadores {
 }
 
 model bai_bairros {
+  st_sob_consulta Boolean @default(false)
   dt_exc        DateTime?     @banco.Timestamptz(3)
   id_bai        String        @id @default(uuid()) @banco.Uuid
   nom_bai       String        @banco.VarChar(120)
@@ -294,4 +295,9 @@ model ger_fechamentos_caixa {
  resumo Json
  obs_ger String
  autor usr_usuarios @relation(fields:[id_usr],references:[id_usr])
+}
+
+model cfg_cargas {
+  id_carga String @id
+  dt_cad DateTime @default(now()) @banco.Timestamptz(3)
 }
