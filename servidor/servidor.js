@@ -1,4 +1,5 @@
 import { registrarUsuarios } from './usuarios.js';
+import { criarEntrada } from './hospedagem.js';
 import { registrarCaixaRegistro } from './caixa-registro.js';
 import { registrarRelatorios } from './relatorios.js';
 import { registrarCaixaDiario } from './caixa-diario.js';
@@ -20,14 +21,15 @@ import { banco, criarPedido, despachar, mudarStatus, fecharCaixa, transacao } fr
 import { registrarControle, validarAcessoEmpresa } from './controle.js';
 import { registrarPortal } from './portal.js';
 import { registrarPainel } from './painel.js';
-const aplicacao = express(), http = createServer(aplicacao);
+const aplicacao = express();
+const http = createServer(process.env.SERVIR_INTERFACE === 'true' ? criarEntrada(aplicacao) : aplicacao);
 // Em produção, somente o Caddy alcança a API pela rede privada do Docker.
 if (process.env.PROXY_CONFIAVEL === 'true') aplicacao.set('trust proxy', 1);
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
 redis.on('error', () => console.error('Falha de conexão com Redis'));
 const sub = redis.duplicate();
 sub.on('error', () => console.error('Falha no assinante Redis'));
-const origens = (process.env.WEB_ORIGINS ?? 'http://localhost:3000').split(',');
+const origens = (process.env.WEB_ORIGINS ?? process.env.RENDER_EXTERNAL_URL ?? 'http://localhost:3000').split(',').map(origem => origem.trim());
 const io = new Server(http, { cors: { origin: origens }, transports: ['websocket'], allowRequest: (requisicao, cb) => cb(null, !requisicao.headers.origin || origens.includes(requisicao.headers.origin)) });
 io.adapter(createAdapter(redis, sub));
 aplicacao.use(helmet(), cors({ origin: origens }), express.json({ limit: '32kb' }));

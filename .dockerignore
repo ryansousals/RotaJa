@@ -5,7 +5,9 @@ dist
 .env.*
 coverage
 apps
-interface
+**/node_modules
+**/publicacao
+**/resultados-testes
 entrega
 backups
 *.pem

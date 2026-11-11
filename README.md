@@ -24,6 +24,8 @@ Os volumes preservam os dados. Não exclua os volumes para atualizar o código. 
 
 ## Publicar na internet
 
+**Alternativa gratuita à Oracle:** [Render + Neon](documentacao/RENDER.md), com `render.yaml` e `Dockerfile.render`. Indicada para avaliação online devido aos limites e à suspensão por inatividade do plano gratuito.
+
 Veja [o guia de publicação](documentacao/PUBLICACAO.md). A configuração independente `compose.producao.yml` inclui HTTPS automático, rede privada para banco/cache/API, cookies seguros e backup. Exige um servidor Linux com Docker e um domínio ou subdomínio apontado para ele. Não use o compose local para expor o sistema na internet.
 
 Ensaio local isolado da configuração de produção: `node rotinas/verificar-publicacao.js` (requer Docker e dependências Node). Usa a porta local 18443 e banco descartável; não altera os dados da instalação local.

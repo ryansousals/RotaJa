@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: rotaja
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile.render
+    healthCheckPath: /api/saude
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_SENHA
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: rotaja-cache
+          property: connectionString
+  - type: keyvalue
+    name: rotaja-cache
+    plan: free
+    region: frankfurt
+    maxmemoryPolicy: noeviction
+    ipAllowList: []

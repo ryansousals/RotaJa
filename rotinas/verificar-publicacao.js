@@ -8,15 +8,36 @@ import { io } from 'socket.io-client';
 
 mkdirSync('entrega', { recursive: true });
 const senha = randomBytes(24).toString('hex');
+const usarRender = process.argv.includes('--render');
 const ambiente = { ...process.env, DOMINIO: 'localhost', POSTGRES_USER: 'ensaio', POSTGRES_DB: 'ensaio', POSTGRES_PASSWORD: senha, ADMIN_EMAIL: 'ensaio@rotaja.local', ADMIN_SENHA: senha };
-writeFileSync('entrega/compose.ensaio.yml', `services:
+const configuracao = `services:
   entrada:
     ports: !override
       - "127.0.0.1:18443:443"
   api:
     environment:
       WEB_ORIGINS: https://localhost:18443
-`);
+`;
+writeFileSync('entrega/Caddyfile.render', '{$DOMINIO} {\n reverse_proxy api:3001\n}\n');
+writeFileSync('entrega/compose.ensaio.yml', usarRender ? `services:
+  entrada:
+    ports: !override
+      - "127.0.0.1:18443:443"
+    volumes: !override
+      - ./entrega/Caddyfile.render:/etc/caddy/Caddyfile:ro
+      - certificados:/data
+      - configuracao_caddy:/config
+  api:
+    build: !override
+      context: .
+      dockerfile: Dockerfile.render
+    environment:
+      WEB_ORIGINS: https://localhost:18443
+      ADMIN_EMAIL: \${ADMIN_EMAIL}
+      ADMIN_SENHA: \${ADMIN_SENHA}
+    healthcheck:
+      test: [CMD, node, -e, 'fetch("http://127.0.0.1:3001/api/saude").then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))']
+` : configuracao);
 const argumentos = ['compose', '--env-file', 'infraestrutura/producao.env.example', '-p', 'rotaja-publicacao-teste', '-f', 'compose.producao.yml', '-f', 'entrega/compose.ensaio.yml'];
 function executar(comando) {
     const resultado = spawnSync('docker', [...argumentos, ...comando], { env: ambiente, encoding: 'utf8', timeout: 240000 });
