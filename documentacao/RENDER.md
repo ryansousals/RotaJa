@@ -1,5 +1,19 @@
 # Publicação gratuita de avaliação: Render + Neon
 
+## Instalação publicada
+
+- Site: https://rotaja.onrender.com
+- Data de publicação: 11/11/2026 (America/Fortaleza).
+- Commit publicado: `20357db`.
+- Render: serviço `rotaja` e Key Value `rotaja-cache`, ambos no plano Free.
+- Neon: projeto `small-term-33102555`, branch `production`.
+- Verificado no endereço público: HTTPS, login administrativo, conexão em tempo real, 59 bairros carregados e logout com retorno à tela de acesso.
+- Banco iniciado com administrador e catálogo oficial; cadastros e pedidos locais não foram importados.
+- As migrações foram ensaiadas em uma branch temporária do Neon; a branch de ensaio foi removida após a validação.
+- O repositório foi conectado como público. Verifique novos commits no painel e use publicação manual quando necessário; não dependa de auto-deploy sem configurar a integração GitHub.
+
+As credenciais administrativas são as mesmas configuradas localmente no momento da publicação. Não estão documentadas nem versionadas. Os valores de conexão foram inseridos nas variáveis privadas do Render.
+
 Esta opção dispensa a criação de uma máquina Oracle. Usa Render Web Service Free, Render Key Value Free e Neon Free. Não crie PostgreSQL gratuito no Render: ele expira em 30 dias. O serviço web dorme após 15 minutos sem tráfego e pode demorar cerca de um minuto para voltar. O Redis gratuito perde sessões e posições GPS temporárias ao reiniciar; pedidos e finanças permanecem no PostgreSQL. A própria Render desaconselha o plano gratuito para produção.
 
 ## 1. Banco no Neon
